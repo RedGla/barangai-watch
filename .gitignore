@@ -15,6 +15,7 @@ ml/images/
 ml/manifest.csv
 *.pt
 *.pth
+!models/efficientnet_b0-v3.pt
 artifacts/
 .playwright-mcp/
 deploy/private_model/

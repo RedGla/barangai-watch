@@ -3,7 +3,7 @@ param([int]$Port = 8000)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $python = Join-Path $projectRoot '.venv/Scripts/python.exe'
-$checkpoint = Join-Path $projectRoot 'artifacts/training/2026-10-20-close-ground-level-v3/outputs/comparison_v3/efficientnet_b0.pt'
+$checkpoint = Join-Path $projectRoot 'models/efficientnet_b0-v3.pt'
 $website = Join-Path $projectRoot 'apps/web/dist'
 if (!(Test-Path -LiteralPath $python)) { throw 'Create .venv and install the API and CPU vision dependencies. See README.md.' }
 if (!(Test-Path -LiteralPath $checkpoint)) { throw 'The reviewed v3 checkpoint is missing. See ml/TRAINING-RESULTS-V3-2026-10-20.md.' }

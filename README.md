@@ -43,7 +43,7 @@ cd ../apps/web; npm test; npm run build
 
 ## Local presentation with AI
 
-The reviewed checkpoint must exist at the private artifact path recorded in [v3 results](ml/TRAINING-RESULTS-V3-2026-10-20.md). It is excluded from Git. Install the CPU runtime in the project environment, then build and start:
+The reviewed checkpoint is included in this private repository at [models/efficientnet_b0-v3.pt](models/efficientnet_b0-v3.pt). See its [model notes](models/README.md) for the approved hash, measured limits and private-use scope. Install the CPU runtime in the project environment, then build and start:
 
 ```powershell
 python -m venv .venv
@@ -63,7 +63,7 @@ The `0.8` confidence cutoff is a presentation guard, **not a calibrated producti
 To exercise the real checkpoint through the API with synthetic test photos:
 
 ```powershell
-$env:BARANGAI_TEST_CHECKPOINT = (Resolve-Path 'artifacts/training/2026-10-20-close-ground-level-v3/outputs/comparison_v3/efficientnet_b0.pt').Path
+$env:BARANGAI_TEST_CHECKPOINT = (Resolve-Path 'models/efficientnet_b0-v3.pt').Path
 $env:OMP_NUM_THREADS = '2'
 $env:MKL_NUM_THREADS = '2'
 .\.venv\Scripts\python.exe -m pytest apps/api/tests/test_real_model.py -q
