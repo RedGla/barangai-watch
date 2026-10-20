@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir . \
     && useradd --uid 10001 --create-home app
 COPY --from=frontend /build/dist ./static
 COPY deploy/start-render.sh ./start-render.sh
+COPY deploy/supabase-ca.crt ./supabase-ca.crt
 USER app
 EXPOSE 10000
 CMD ["sh", "/app/start-render.sh"]
