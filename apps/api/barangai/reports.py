@@ -1,0 +1,108 @@
+import os
+import logging
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from .auth import get_current_user, rate_limit, require_csrf, require_role
+from . import inference
+from .db import get_db
+from .media import delete_image, image_response, sanitize_image, save_image
+from .models import Report, ReportEvent, User, now, utc_iso
+
+router = APIRouter(prefix="/reports")
+CATEGORIES = {"flooding", "potholes", "fallen_trees", "uncollected_garbage", "damaged_signage"}
+
+
+def serialize_report(report, detail=False):
+    result = {"id": report.id, "resident_id": report.resident_id, "description": report.description,
+              "latitude": report.latitude, "longitude": report.longitude,
+              "resident_category": report.resident_category, "model_category": report.model_category,
+              "verified_category": report.verified_category, "prediction_available": bool(report.embedding_model_version),
+              "status": report.status, "created_at": utc_iso(report.created_at),
+              "updated_at": utc_iso(report.updated_at), "image_url": f"/api/reports/{report.id}/image"}
+    if detail:
+        result["events"] = [{"id": event.id, "from_status": event.from_status, "to_status": event.to_status,
+                              "actor_id": event.actor_id, "note": event.note, "created_at": utc_iso(event.created_at)}
+                             for event in report.events]
+        result["actions"] = [{"id": action.id, "actor_id": action.actor_id, "kind": action.kind,
+                               "note": action.note, "created_at": utc_iso(action.created_at)}
+                              for action in report.actions]
+    return result
+
+
+def authorized_report(report_id: str, db: Session, user: User):
+    report = db.get(Report, report_id)
+    if not report or (user.role == "resident" and report.resident_id != user.id):
+        raise HTTPException(404, "Report not found")
+    return report
+
+
+def sanitized_upload(image: UploadFile):
+    max_bytes = int(os.environ.get("MAX_IMAGE_BYTES", 5_000_000))
+    return sanitize_image(image.file.read(max_bytes + 1))
+
+
+@router.post("/predict")
+def preview_prediction(request: Request, image: UploadFile = File(...), user: User = Depends(require_csrf)):
+    require_role(user, {"resident"})
+    rate_limit(request, "upload")
+    result = inference.predict(sanitized_upload(image))
+    return {"prediction_available": result is not None,
+            "model_category": result.category if result else None,
+            "confidence": result.confidence if result else None}
+
+
+@router.post("", status_code=201)
+def submit_report(request: Request, image: UploadFile = File(...), latitude: float = Form(...), longitude: float = Form(...),
+                        resident_category: str = Form(...), description: str | None = Form(None),
+                        db: Session = Depends(get_db), user: User = Depends(require_csrf)):
+    require_role(user, {"resident"})
+    rate_limit(request, "upload")
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180) or resident_category not in CATEGORIES:
+        raise HTTPException(422, "Invalid location or category")
+    sanitized = sanitized_upload(image)
+    prediction = inference.predict(sanitized)
+    report = Report(resident_id=user.id, latitude=latitude, longitude=longitude,
+                    resident_category=resident_category, description=description, image_path="",
+                    model_category=prediction.category if prediction else None,
+                    image_embedding=prediction.embedding if prediction else None,
+                    embedding_model_version=prediction.model_version if prediction else None)
+    db.add(report)
+    db.flush()
+    db.add(ReportEvent(report_id=report.id, from_status=None, to_status="Pending", actor_id=user.id))
+    location = None
+    try:
+        location = save_image(report.id, sanitized)
+        report.image_path = location
+        db.commit()
+    except Exception:
+        db.rollback()
+        if location:
+            try:
+                delete_image(location)
+            except Exception:
+                logging.getLogger(__name__).error("Could not clean up image for rolled-back report %s", report.id)
+        raise
+    db.refresh(report)
+    return serialize_report(report, detail=True)
+
+
+@router.get("")
+def list_reports(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    query = select(Report).order_by(Report.created_at.desc())
+    if user.role == "resident":
+        query = query.where(Report.resident_id == user.id)
+    return [serialize_report(report) for report in db.scalars(query)]
+
+
+@router.get("/{report_id}")
+def report_detail(report_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return serialize_report(authorized_report(report_id, db, user), detail=True)
+
+
+@router.get("/{report_id}/image")
+def report_image(report_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    report = authorized_report(report_id, db, user)
+    return image_response(report.image_path)

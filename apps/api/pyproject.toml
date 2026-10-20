@@ -1,0 +1,12 @@
+[project]
+name = "barangai-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi", "uvicorn", "sqlalchemy>=2", "alembic", "psycopg2-binary", "argon2-cffi", "python-multipart", "Pillow", "httpx", "google-auth[requests]==2.58.0"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+vision = ["torch", "torchvision"]
+
+[tool.setuptools.packages.find]
+include = ["barangai*"]

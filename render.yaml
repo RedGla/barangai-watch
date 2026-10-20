@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+services:
+  - type: web
+    name: barangai-watch
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/Dockerfile.render
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: MEDIA_STORAGE
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: incident-photos
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: STATIC_SITE_DIR
+        value: /app/static
+      - key: MAX_IMAGE_BYTES
+        value: "5000000"
+      - key: MAX_REQUEST_BYTES
+        value: "6000000"

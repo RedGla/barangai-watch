@@ -1,0 +1,21 @@
+FROM node:22-alpine AS frontend
+WORKDIR /build
+COPY apps/web/package.json apps/web/package-lock.json ./
+RUN npm ci
+COPY apps/web/ ./
+RUN npm run build
+
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 STATIC_SITE_DIR=/app/static
+WORKDIR /app
+COPY apps/api/pyproject.toml ./
+COPY apps/api/barangai ./barangai
+COPY apps/api/alembic.ini ./
+COPY apps/api/migrations ./migrations
+RUN pip install --no-cache-dir . \
+    && useradd --uid 10001 --create-home app
+COPY --from=frontend /build/dist ./static
+COPY deploy/start-render.sh ./start-render.sh
+USER app
+EXPOSE 10000
+CMD ["sh", "/app/start-render.sh"]
