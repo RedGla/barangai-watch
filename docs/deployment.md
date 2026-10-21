@@ -1,6 +1,6 @@
 # Render + Supabase deployment readiness
 
-The selected route is Render Free + Supabase Free, replacing the earlier OCI proposal. A single container serves the React website and FastAPI under one HTTPS origin. PostgreSQL and private photos persist in Supabase. The existing public service is [BarangAI Watch](https://barangai-watch.onrender.com); its `/api/health` returned `{"status":"ok"}` on 21 October 2026. The corrected AI image still requires an authorized release and hosted prediction verification.
+The selected route is Render Free + Supabase Free, replacing the earlier OCI proposal. A single container serves the React website and FastAPI under one HTTPS origin. PostgreSQL and private photos persist in Supabase. The existing public service is [BarangAI Watch](https://barangai-watch.onrender.com); its `/api/health` returned `{"status":"ok"}` on 21 October 2026. Commit `5f37888` was deployed successfully on 21 October 2026. Three authenticated synthetic photo previews returned `prediction_available=true`; unauthorized prediction was denied. This verifies availability, not classification accuracy or maximum-load memory use.
 
 Follow [Render setup](render-setup.md), [Supabase setup](supabase-setup.md), and [Google sign-in setup](google-sign-in.md). The root render.yaml declares one Free Docker service, manual code deployments and no paid Render database or disk. Credentials belong only in server secret settings. Publishing, project selection and deployment still require the user's authorization.
 
