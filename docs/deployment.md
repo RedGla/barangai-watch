@@ -1,6 +1,6 @@
 # Render + Supabase deployment readiness
 
-The selected route is Render Free + Supabase Free, replacing the earlier OCI proposal. A single container serves the React website and FastAPI under one HTTPS origin. PostgreSQL and private photos persist in Supabase. No public deployment has been performed.
+The selected route is Render Free + Supabase Free, replacing the earlier OCI proposal. A single container serves the React website and FastAPI under one HTTPS origin. PostgreSQL and private photos persist in Supabase. The existing public service is [BarangAI Watch](https://barangai-watch.onrender.com); its `/api/health` returned `{"status":"ok"}` on 21 October 2026. The corrected AI image still requires an authorized release and hosted prediction verification.
 
 Follow [Render setup](render-setup.md), [Supabase setup](supabase-setup.md), and [Google sign-in setup](google-sign-in.md). The root render.yaml declares one Free Docker service, manual code deployments and no paid Render database or disk. Credentials belong only in server secret settings. Publishing, project selection and deployment still require the user's authorization.
 
@@ -14,11 +14,13 @@ Follow [Render setup](render-setup.md), [Supabase setup](supabase-setup.md), and
 
 ## AI readiness
 
-The baseline Render image excludes Torch, TorchVision and weights. Private trained checkpoints and local integration evidence exist; see [latest model comparison](../ml/TRAINING-RESULTS-V4-2026-10-20.md). No checkpoint has been benchmarked against the Free service's memory and CPU limits. Manual categorization is explicit; automatic duplicate suggestions also require validated embeddings. These remain real requirements for the complete AI demonstration.
+The Render image packages the reviewed EfficientNet-B0 v3 checkpoint, CPU Torch 2.11.0 and TorchVision 0.26.0. It supplies `MODEL_CHECKPOINT`, `MODEL_APPROVED_SHA256` and the demo-only `MODEL_CONFIDENCE_THRESHOLD=0.8` as image defaults, so the same build enables predictions for an existing service without a separate Blueprint sync. A build-time hash check and the API's startup validation reject incorrect weights. Remove any old empty overrides of these three variables in the service settings; an empty `MODEL_CHECKPOINT` explicitly disables inference.
+
+Thread counts are limited to one and the service still starts one application worker. Verify the image under the Free plan's memory and CPU limits before release, then verify the actual hosted prediction endpoint after an authorized deployment. Local evidence does not establish hosted behavior. See [model notes](../models/README.md) and [latest model comparison](../ml/TRAINING-RESULTS-V4-2026-10-20.md) for measured classification limitations. Manual categorization remains available; automatic duplicate suggestions still require validated embeddings.
 
 Use the [ML commands](../ml/README.md) to train both approved architectures. Choose uncertainty thresholds using validation predictions only; reserve the test set for final evaluation. Record actual accuracy, macro F1, class metrics, confusion matrix, size, memory, cold-start and latency measurements. If the model cannot fit the approved zero-cost hosting, document the measured limitation and obtain approval before changing architecture or scope.
 
-The optional inference adapter requires MODEL_CHECKPOINT, MODEL_APPROVED_SHA256 and MODEL_CONFIDENCE_THRESHOLD. It checks trusted file digest, architecture, classes and preprocessing before loading. Embedding-based duplicates additionally require VALIDATED_EMBEDDING_MODEL_VERSION. Do not enable these settings in the baseline image without adding and benchmarking the optional vision dependencies.
+The inference adapter checks trusted file digest, architecture, classes and preprocessing before loading. Its configuration remains optional for local development and the separate Compose image. Embedding-based duplicates additionally require VALIDATED_EMBEDDING_MODEL_VERSION; do not set it until embedding quality is independently validated.
 
 ## Data and operating limits
 

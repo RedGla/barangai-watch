@@ -17,4 +17,5 @@ deploy/private_model
 .git
 docs
 ml
-models
+models/*
+!models/efficientnet_b0-v3.pt

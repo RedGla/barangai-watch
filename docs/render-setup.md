@@ -2,13 +2,13 @@
 
 The prepared configuration builds React and FastAPI into one container. Render serves the website at `/` and the API at `/api` on the same HTTPS origin. Supabase holds PostgreSQL data and private incident photos. Local development keeps its existing storage and proxy setup.
 
-This is deployment preparation. No repository has been published and no cloud service has been created. Creating a Blueprint starts the initial deployment; perform that step only after the user authorizes publishing and deployment.
+The existing demo runs at [BarangAI Watch](https://barangai-watch.onrender.com). The corrected AI image is prepared locally; publishing and deployment require the user's authorization. For a new installation, creating a Blueprint starts its initial deployment, so perform that step only when authorized.
 
 ## 1. Accounts and source
 
 Create a [Render account](https://dashboard.render.com/) and a Supabase Free project, preferably in Singapore. Complete [Supabase setup](supabase-setup.md), including its private bucket and database security configuration. Then, with the user's authorization, publish this repository to a Git provider that Render supports. Render cannot build an unpublished local directory.
 
-The root `render.yaml` declares exactly one `free` web service in Singapore. It creates no Render database, disk, worker, or paid resource. The [current free compute plan](https://render.com/docs/compute-plans) provides 512 MB of memory; this image excludes PyTorch and model weights. Image classification remains unavailable until a real model is trained, validated, and benchmarked on suitable hardware.
+The root `render.yaml` declares exactly one `free` web service in Singapore. It creates no Render database, disk, worker, or paid resource. The [current free compute plan](https://render.com/docs/compute-plans) provides 512 MB of memory and 0.1 CPU. The image includes the reviewed v3 model and a pinned CPU-only PyTorch runtime. Verify resource use before release and check predictions on the actual host afterward; see [AI readiness](deployment.md#ai-readiness).
 
 ## 2. Private environment settings
 
@@ -20,7 +20,7 @@ Enter these values in the Render Blueprint setup prompts. They are marked `sync:
 | `SUPABASE_URL` | The project's `https://<project-ref>.supabase.co` URL. |
 | `SUPABASE_SECRET_KEY` | A server-only `sb_secret_...` key. Never place it in a `VITE_` variable, frontend code, or a public document. |
 
-The Blueprint sets `MEDIA_STORAGE=supabase`, `SUPABASE_STORAGE_BUCKET=incident-photos`, `COOKIE_SECURE=true`, and `STATIC_SITE_DIR=/app/static`. If you choose a different private bucket name, update that setting before deployment. Leave `API_ROOT_PATH` unset; the application mounts `/api` itself. Keep optional paid services and model checkpoint settings unset for this baseline.
+The Blueprint sets `MEDIA_STORAGE=supabase`, `SUPABASE_STORAGE_BUCKET=incident-photos`, `COOKIE_SECURE=true`, and `STATIC_SITE_DIR=/app/static`. If you choose a different private bucket name, update that setting before deployment. Leave `API_ROOT_PATH` unset; the application mounts `/api` itself. The image supplies the reviewed model path, approved hash and demo-only 0.8 confidence cutoff. Remove old empty model-variable overrides so those defaults apply. Keep optional paid services unset.
 
 ## 3. Review and deploy when authorized
 
@@ -41,7 +41,7 @@ Create the initial staff account from a trusted local terminal connected to this
 5. Restart the service, sign in again, and confirm the report and photo remain available. Inspect the Supabase database and bucket for the persisted records.
 6. Repeat the upload flow on a physical phone using both an existing image and a new photo. Browser automation alone does not prove the phone's file picker works.
 
-Remote checks, physical phone checks, and a full container build remain pending until accounts, credentials, a published repository, deployment authorization, and a running Docker daemon are available. Local unit tests and schema validation do not prove cloud connectivity.
+Remote checks and physical phone checks require the intended service, credentials and deployment authorization. Local container verification does not prove cloud connectivity or native phone camera behavior.
 
 ## Free service limits
 
@@ -55,4 +55,12 @@ With Docker running, build from the repository root:
 docker build --file deploy/Dockerfile.render --tag barangai-render .
 ```
 
-Validate `render.yaml` against [Render's current JSON Schema](https://render.com/schema/render.yaml.json). If a compatible Render CLI is already installed, `render blueprints validate render.yaml` adds platform validation without creating resources. On this workstation the CLI is not installed and the Docker daemon is not running; the Blueprint was checked against the downloaded official JSON Schema instead.
+Run the offline packaged-image check with the Free plan's resource limits (PowerShell or a POSIX shell, from the repository root):
+
+```sh
+docker run --rm --network none --memory 512m --memory-swap 512m --cpus 0.1 --mount "type=bind,source=${PWD}/deploy/verify-render-ai.py,target=/tmp/verify-render-ai.py,readonly" --entrypoint python barangai-render /tmp/verify-render-ai.py
+```
+
+This uses synthetic accounts and photos in a temporary local database, with no external connections. It checks the compiled website, authentication, real-model previews, resident category preservation, private sanitized photos, large image handling, and reports startup time, latency and peak memory. It bypasses the provider startup script, so hosted migrations and Supabase connectivity must be checked separately.
+
+Validate `render.yaml` against [Render's current JSON Schema](https://render.com/schema/render.yaml.json). If a compatible Render CLI is already installed, `render blueprints validate render.yaml` adds platform validation without creating resources.

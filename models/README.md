@@ -10,4 +10,4 @@ This private repository includes the reviewed EfficientNet-B0 v3 checkpoint used
 
 The tiny development test scored 24/26, macro F1 0.75; **both held-out tree photos were misclassified as flooding**. These are not field-accuracy results. The 0.8 cutoff is not calibrated. Resident category selection and staff verification remain necessary. See [v3 results](../ml/TRAINING-RESULTS-V3-2026-10-20.md) and [later comparison](../ml/TRAINING-RESULTS-V4-2026-10-20.md) for limitations and why v3 remains the demo model.
 
-The Render Free deployment still excludes the model and Torch runtime. Adding this file to GitHub does not enable hosted AI. A separate resource benchmark and deployment change are required.
+The Render image now packages this checkpoint and the pinned CPU Torch runtime, verifies the checkpoint hash during the build, and enables the same demo-only confidence cutoff by default. Only this reviewed checkpoint is admitted by the Docker build context. Local container verification and an authorized release are required before claiming hosted AI works; see [deployment readiness](../docs/deployment.md).

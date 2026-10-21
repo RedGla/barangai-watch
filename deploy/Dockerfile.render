@@ -6,14 +6,22 @@ COPY apps/web/ ./
 RUN npm run build
 
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 STATIC_SITE_DIR=/app/static
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 STATIC_SITE_DIR=/app/static \
+    MODEL_CHECKPOINT=/app/models/efficientnet_b0-v3.pt \
+    MODEL_APPROVED_SHA256=06b5ad7c02112c599c056b9be52fe771a3bdfdb08577897d1a962c1dd2c1f409 \
+    MODEL_CONFIDENCE_THRESHOLD=0.8 \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MALLOC_ARENA_MAX=2
 WORKDIR /app
 COPY apps/api/pyproject.toml ./
 COPY apps/api/barangai ./barangai
 COPY apps/api/alembic.ini ./
 COPY apps/api/migrations ./migrations
-RUN pip install --no-cache-dir . \
+COPY deploy/requirements-render-vision.txt /tmp/requirements-render-vision.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-render-vision.txt \
+    && pip install --no-cache-dir . \
     && useradd --uid 10001 --create-home app
+COPY models/efficientnet_b0-v3.pt ./models/efficientnet_b0-v3.pt
+RUN echo "$MODEL_APPROVED_SHA256  $MODEL_CHECKPOINT" | sha256sum --check --status
 COPY --from=frontend /build/dist ./static
 COPY deploy/start-render.sh ./start-render.sh
 COPY deploy/supabase-ca.crt ./supabase-ca.crt
