@@ -25,3 +25,14 @@ artifacts/
 .playwright-mcp/
 deploy/private_model/
 .shots/
+
+# Secrets and data-provider credentials: never commit
+.env.*
+!.env.example
+kaggle.json
+.kaggle/
+.roboflow/
+*.api_key
+
+# ML datasets and review sheets (third-party images; share via private Drive, not Git)
+ml/data/
