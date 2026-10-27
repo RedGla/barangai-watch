@@ -12,7 +12,8 @@ def test_prediction_preview_requires_auth_and_falls_back_without_checkpoint(clie
     response = client.post("/reports/predict", files=files,
                            headers={"X-CSRF-Token": client.cookies["csrf_token"]})
     assert response.status_code == 200
-    assert response.json() == {"prediction_available": False, "model_category": None, "confidence": None}
+    assert response.json() == {"prediction_available": False, "model_category": None, "confidence": None,
+                               "suggested_description": None}
 
 
 def test_prediction_is_previewed_and_recomputed_for_saved_report(client, photo, monkeypatch):
@@ -29,7 +30,8 @@ def test_prediction_is_previewed_and_recomputed_for_saved_report(client, photo, 
     headers = {"X-CSRF-Token": client.cookies["csrf_token"]}
     preview = client.post("/reports/predict", files={"image": ("incident.jpg", photo, "image/jpeg")},
                           headers=headers)
-    assert preview.json() == {"prediction_available": True, "model_category": "potholes", "confidence": 0.91}
+    assert preview.json() == {"prediction_available": True, "model_category": "potholes", "confidence": 0.91,
+                              "suggested_description": None}
     saved = submit(client, photo, resident_category="flooding").json()
     assert len(calls) == 2
     assert saved["resident_category"] == "flooding"
@@ -96,7 +98,8 @@ def test_runtime_failure_keeps_manual_photo_submission_working(client, photo, mo
     headers = {"X-CSRF-Token": client.cookies["csrf_token"]}
     preview = client.post("/reports/predict", files={"image": ("incident.jpg", photo, "image/jpeg")}, headers=headers)
     assert preview.status_code == 200
-    assert preview.json() == {"prediction_available": False, "model_category": None, "confidence": None}
+    assert preview.json() == {"prediction_available": False, "model_category": None, "confidence": None,
+                              "suggested_description": None}
     saved = submit(client, photo, resident_category="fallen_trees")
     assert saved.status_code == 201
     assert saved.json()["resident_category"] == "fallen_trees"

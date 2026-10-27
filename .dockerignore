@@ -5,6 +5,8 @@
 **/.pytest_cache
 **/.pytest_tmp
 **/.env
+env
+.claude
 **/.env.*
 !**/.env.example
 **/private_media

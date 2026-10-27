@@ -82,3 +82,12 @@ def test_oversized_unauthenticated_multipart_is_rejected_before_parsing(client, 
     assert response.status_code == 413
     preview = client.post("/reports/predict", files={"image": ("large.jpg", b"x" * 200, "image/jpeg")})
     assert preview.status_code == 413
+
+
+def test_paper_categories_and_other_are_accepted_but_unknown_is_refused(client, photo):
+    register(client)
+    for category in ("broken_streetlights", "exposed_wiring", "other"):
+        response = submit(client, photo, resident_category=category)
+        assert response.status_code == 201, response.text
+        assert response.json()["resident_category"] == category
+    assert submit(client, photo, resident_category="earthquake").status_code == 422

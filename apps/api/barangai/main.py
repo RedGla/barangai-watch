@@ -1,46 +1,32 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import models
-from .auth import attempts, router as auth_router
-from .db import Base, database_url, engine_for_url
+from .auth import attempts
+from .auth import router as auth_router
+from .body_limit import ReportBodyLimitMiddleware
+from .db import database_url, upgrade_sqlite
+from .duplicates import router as duplicates_router
+from .fallbacks import router as fallbacks_router
+from .google_auth import router as google_router
+from .inference import validate_configured_model
+from .media import validate_storage_config
+from .notifications import router as notifications_router
 from .reports import router as reports_router
 from .workflow import router as workflow_router
-from .fallbacks import router as fallbacks_router
-from .duplicates import router as duplicates_router
-from .body_limit import ReportBodyLimitMiddleware
-from .inference import validate_configured_model
-from .notifications import router as notifications_router
-from .media import validate_storage_config
-from .google_auth import router as google_router
 
 
 def create_app():
     validate_configured_model()
     validate_storage_config()
-    app = FastAPI(title="BarangAI Watch API", root_path=os.environ.get("API_ROOT_PATH", ""))
+    app = FastAPI(title="BarangAI API", root_path=os.environ.get("API_ROOT_PATH", ""))
     attempts.clear()
 
-    @app.middleware("http")
-    async def reject_forged_role(request: Request, call_next):
-        path = request.scope["path"].removeprefix(request.scope.get("root_path", ""))
-        if path == "/auth/register" and request.method == "POST":
-            body = await request.body()
-            import json
-            try:
-                supplied_role = "role" in json.loads(body)
-            except (ValueError, TypeError):
-                supplied_role = False
-            if supplied_role:
-                from fastapi.responses import JSONResponse
-                return JSONResponse({"detail": "Role cannot be selected"}, status_code=403)
-        return await call_next(request)
-
     if database_url().startswith("sqlite"):
-        Base.metadata.create_all(engine_for_url(database_url()))
+        upgrade_sqlite()
     app.include_router(auth_router)
     app.include_router(google_router)
     app.include_router(reports_router)
@@ -55,6 +41,22 @@ def create_app():
         return {"status": "ok"}
 
     return app
+
+
+class SiteFiles(StaticFiles):
+    """Static website that answers client routes (paths without a file extension) with index.html."""
+
+    async def get_response(self, path, scope):
+        parts = Path(path).parts
+        if any(part.startswith(".") for part in parts):
+            raise StarletteHTTPException(404)  # Never serve dotfiles such as .env or .git, even if present.
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as error:
+            # Unknown API paths stay API 404s; missing assets (with an extension) stay 404s.
+            if error.status_code != 404 or "." in Path(path).name or (parts and parts[0].startswith("api")):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 def site_app(api, directory):
@@ -74,7 +76,7 @@ def site_app(api, directory):
         return response
 
     site.mount("/api", api)
-    site.mount("/", StaticFiles(directory=directory, html=True))
+    site.mount("/", SiteFiles(directory=directory, html=True))
     return site
 
 

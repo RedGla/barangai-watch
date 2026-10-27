@@ -1,10 +1,10 @@
-# BarangAI Watch
+# BarangAI
 
 Community incident reporting for a single Philippine barangay, prepared for an academic presentation demo. Residents submit photographed, located concerns; barangay staff verify and manage them. No report is forwarded automatically. See the [presentation guide](docs/presentation-demo.md), [feature status](docs/feature-status.md), and [deployment guide](docs/deployment.md) for capabilities and remaining gates.
 
 ## Current state
 
-The local application includes resident, staff and administrator permissions, private sanitized photo uploads, ownership checks, status transitions, actions and audit history. Residents can choose an existing photo or use a camera input, preview the selection and submit it. Reviewed v3 model weights and measured development results exist privately; the local presentation launcher enables AI suggestions. Both models missed the two held-out tree images, so staff verification remains essential. Embedding quality for duplicate review is not validated. Chat supports English, Filipino and Taglish with authorized tracking and optional Workers AI guidance. The public demo is [BarangAI Watch](https://barangai-watch.onrender.com). The reviewed AI image was deployed on 21 October 2026; three authenticated synthetic photo previews returned predictions successfully.
+The local application includes resident, staff and administrator permissions, private sanitized photo uploads, ownership checks, status transitions, actions and audit history. Residents can choose an existing photo or use a camera input, preview the selection and submit it. Reviewed v3 model weights and measured development results exist privately; the local presentation launcher enables AI suggestions. Both models missed the two held-out tree images, so staff verification remains essential. Embedding quality for duplicate review is not validated. Chat supports English, Filipino and Taglish with authorized tracking and optional Workers AI guidance. The public demo is [BarangAI](https://barangai-watch.onrender.com). The reviewed AI image was deployed on 21 October 2026; three authenticated synthetic photo previews returned predictions successfully.
 
 The staff portal includes filters, category counts, a seven-day trend and an incident map. In-app notifications record status changes and read/unread state. The interface supports English and Filipino. Resident Google sign-in is implemented and hidden until credentials are configured. The administrator [deletion command](docs/data-deletion.md) defaults to a dry run and requires explicit confirmation.
 
@@ -12,7 +12,7 @@ The selected hosting setup is **Render Free + Supabase Free**. One container ser
 
 ## Local setup
 
-Use Python 3.12, Node.js 24, and PostgreSQL. Copy [`.env.example`](.env.example) into your local environment, fill `DATABASE_URL`, and keep it out of Git. For local HTTP only, set `COOKIE_SECURE=false`; production defaults to a secure cookie. Store `PRIVATE_MEDIA_DIR` outside any public web root. Do not use real resident information in tests or demos.
+Use Python 3.12, Node.js 22, and PostgreSQL. Copy [`.env.example`](.env.example) into your local environment, fill `DATABASE_URL`, and keep it out of Git. For local HTTP only, set `COOKIE_SECURE=false`; production defaults to a secure cookie. Store `PRIVATE_MEDIA_DIR` outside any public web root. Do not use real resident information in tests or demos.
 
 ```powershell
 cd apps/api

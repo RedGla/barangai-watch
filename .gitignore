@@ -6,6 +6,11 @@ __pycache__/
 .pytest_tmp/
 .pytest_tmp*/
 .env
+env
+*.egg-info/
+*.tsbuildinfo
+.claude/settings.local.json
+.claude/.last-check
 *.db
 *.sqlite3
 private_media/
@@ -19,3 +24,4 @@ ml/manifest.csv
 artifacts/
 .playwright-mcp/
 deploy/private_model/
+.shots/

@@ -1,8 +1,0 @@
-__pycache__
-.pytest_cache
-.pytest_tmp
-.env
-private_media
-*.db
-*.sqlite3
-tests

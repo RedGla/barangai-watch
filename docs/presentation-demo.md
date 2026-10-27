@@ -1,4 +1,4 @@
-# BarangAI Watch presentation runbook
+# BarangAI presentation runbook
 
 Use synthetic resident identities and staged, non-identifying incident photos. This runbook is a demo script; it is not evidence that the steps have passed on a public deployment.
 
