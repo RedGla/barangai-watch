@@ -56,3 +56,41 @@ def test_sqlite_migration_upgrade_and_rollback_keep_existing_data(tmp_path, monk
         assert connection.exec_driver_sql("SELECT email FROM users").scalar_one() == "synthetic@example.test"
     assert "notifications" in inspect(engine).get_table_names()
     engine.dispose()
+
+
+def test_sqlite_start_up_migrates_or_stamps_legacy_create_all_database(tmp_path, monkeypatch):
+    from barangai import models  # noqa: F401
+    from alembic.script import ScriptDirectory
+
+    from barangai.db import Base, upgrade_sqlite
+
+    head = ScriptDirectory.from_config(migration_config()).get_current_head()
+
+    for name, legacy in (("fresh.db", False), ("legacy.db", True)):
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{(tmp_path / name).as_posix()}")
+        engine = engine_for_url(database_url())
+        if legacy:
+            Base.metadata.create_all(engine)
+        upgrade_sqlite()
+        with engine.connect() as connection:
+            assert connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar() == head
+        assert set(Base.metadata.tables) <= set(inspect(engine).get_table_names())
+        engine.dispose()
+
+
+def test_sqlite_start_up_refuses_outdated_legacy_database(tmp_path, monkeypatch):
+    import pytest
+    from barangai import models  # noqa: F401
+    from barangai.db import Base, upgrade_sqlite
+
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{(tmp_path / 'old.db').as_posix()}")
+    engine = engine_for_url(database_url())
+    Base.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.exec_driver_sql("ALTER TABLE reports DROP COLUMN embedding_model_version")
+    with pytest.raises(RuntimeError, match="out of date"):
+        upgrade_sqlite()
+    engine.dispose()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://synthetic:x@localhost/example")
+    with pytest.raises(RuntimeError, match="SQLite only"):
+        upgrade_sqlite()

@@ -2,7 +2,7 @@
 
 The prepared configuration builds React and FastAPI into one container. Render serves the website at `/` and the API at `/api` on the same HTTPS origin. Supabase holds PostgreSQL data and private incident photos. Local development keeps its existing storage and proxy setup.
 
-The existing demo runs at [BarangAI Watch](https://barangai-watch.onrender.com). The reviewed AI image (`5f37888`) is live, and three authenticated synthetic prediction previews passed on 21 October 2026. Future publishing and deployment still require user authorization. For a new installation, creating a Blueprint starts its initial deployment, so perform that step only when authorized.
+The existing demo runs at [BarangAI](https://barangai-watch.onrender.com). The reviewed AI image (`5f37888`) is live, and three authenticated synthetic prediction previews passed on 21 October 2026. Future publishing and deployment still require user authorization. For a new installation, creating a Blueprint starts its initial deployment, so perform that step only when authorized.
 
 ## 1. Accounts and source
 

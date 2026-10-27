@@ -12,7 +12,7 @@ Local development: Vite proxies `/api` to FastAPI on port 8000. The selected Ren
 | GET | `/auth/google/start` | Public | Start configured resident Google authorization with PKCE/state. |
 | GET | `/auth/google/callback` | OAuth transaction | Verify identity and create app session; no automatic local-email linking. |
 | GET | `/health` | Public | Process readiness response. |
-| POST | `/reports/predict` | Resident | Multipart `image`; returns an optional model suggestion before submission. Requires CSRF. |
+| POST | `/reports/predict` | Resident | Multipart `image`; returns an optional model category and `suggested_description` (always null until a photo-to-text model is chosen) to pre-fill the form. Requires CSRF. |
 | POST | `/reports` | Resident | Multipart `image`, `latitude`, `longitude`, `resident_category`, optional `description`. |
 | GET | `/reports` | Signed in | Own reports for residents; all for staff/admin. |
 | GET | `/reports/{id}` | Owner or staff/admin | Report with status events and staff actions. |
@@ -26,7 +26,7 @@ Local development: Vite proxies `/api` to FastAPI on port 8000. The selected Ren
 | POST | `/duplicates/{id}/decision` | Staff/admin | `{decision:"confirmed"|"rejected",note?}`. |
 | POST | `/chat` | Resident | `{message,language:"en"|"fil"|"taglish",report_id?}`. Generic guidance may use Workers AI; report status stays deterministic and owner-scoped. |
 
-Categories: `flooding`, `potholes`, `fallen_trees`, `uncollected_garbage`, `damaged_signage`. Status sequence: `Pending`, `Under Verification`, `Accepted`, `In Progress`, `Resolved`; verification may instead end in `Rejected`. A report has distinct `model_category`, `resident_category`, and `verified_category`. The API recomputes inference on submission rather than accepting a client-supplied model category. `prediction_available:false` means no approved classifier is active; an uncertain prediction can be available with `model_category:null`. Another resident's report or image returns 404.
+Categories: `flooding`, `fallen_trees`, `broken_streetlights`, `exposed_wiring`, `potholes`, `uncollected_garbage`, `damaged_signage`, `other`. The model predicts only `flooding`, `potholes`, `fallen_trees`, `uncollected_garbage` and `damaged_signage`. Status sequence: `Pending`, `Under Verification`, `Accepted`, `In Progress`, `Resolved`; verification may instead end in `Rejected`. A report has distinct `model_category`, `resident_category`, and `verified_category`. The API recomputes inference on submission rather than accepting a client-supplied model category. `prediction_available:false` means no approved classifier is active; an uncertain prediction can be available with `model_category:null`. Another resident's report or image returns 404.
 
 Current duplicate and chat behavior is intentionally explicit: without a validated embedding model, duplicate lookup returns `embedding_available:false`, empty suggestions, and `manual_review_required:true`. Chat uses deterministic guidance when Workers AI is unconfigured, times out, fails, exhausts the Free allocation (`429`), or returns an invalid response; that returns `llm_available:false` and `source:"deterministic"`. A valid Workers AI answer returns `llm_available:true` and `source:"workers_ai"`.
 

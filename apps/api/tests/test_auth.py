@@ -49,3 +49,9 @@ def test_session_cookie_is_secure_by_default(client, monkeypatch):
     response = register(client)
     assert response.status_code == 201
     assert "secure" in response.headers["set-cookie"].lower()
+
+
+def test_registration_refuses_role_in_any_casing(client):
+    for key in ("Role", " ROLE"):
+        response = client.post("/auth/register", json={"email": "x@example.test", "password": "safe-password-123", key: "staff"})
+        assert response.status_code == 403

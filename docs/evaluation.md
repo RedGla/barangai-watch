@@ -1,4 +1,4 @@
-# BarangAI Watch evaluation materials
+# BarangAI evaluation materials
 
 These are blank instruments and procedures. No participant responses, model measurements or deployment success are asserted. Use a dated build, consented volunteers, synthetic identities and non-identifying incident photos. Explain participation is voluntary, permit withdrawal, and collect participant codes rather than names. Keep consent records separate from evaluation responses. Obtain the institution's required research approval before recruiting participants.
 

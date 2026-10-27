@@ -1,8 +1,6 @@
 # Feature status
 
-Updated 20 October 2026 (Asia/Manila). Local verification does not imply cloud or physical-device validation.
-
-Supabase update 21 October 2026: approved live migrations reached 0005; all nine tables have RLS and no client policies. Private incident-photos bucket and verified TLS connection work. Live API integration passed JPEG/PNG/WebP uploads, metadata removal, reload, logout/cross-resident denial, and direct public/client denial; synthetic data cleaned up. Security Advisor: zero errors/warnings, nine intentional default-deny informational notices. See [live setup evidence](supabase-verification-2026-10-21.md). Public hosting and physical devices remain pending.
+Updated 26 October 2026 (Asia/Manila). Local verification does not imply cloud or physical-device validation.
 
 | Priority | Capability | State |
 | --- | --- | --- |
@@ -28,4 +26,11 @@ Public application deployment, hosted end-to-end privacy checks, physical-phone 
 
 Latest model evidence: [tree comparison and limitations](../ml/TRAINING-RESULTS-V4-2026-10-20.md). The four local tree photos show one storm event; 4/4 raw tree predictions are not broad reliability evidence and do not pass the demo confidence cutoff.
 
-Latest database/upload evidence: [local PostgreSQL verification](database-verification-2026-10-20.md). All 18 website tests passed, including gallery and camera-input submission. Physical-device acceptance remains pending.
+## Evidence
+
+Synthetic data only. Raw evidence files live under the ignored `artifacts/` folder; superseded logs are in Git history before this file's 26 October update.
+
+- **Local, 20 October:** 90 API, 18 web and 10 ML tests plus the production build passed. Real-browser smoke at 390×844 covered registration, gallery and camera-input uploads, the full staff status path, notifications, Filipino chat status and cross-resident photo denial (404).
+- **Docker PostgreSQL 16, 20 October** (`deploy/verify-local-postgres.py`): migrations 0003→0005 preserve a legacy row; RLS denies simulated `anon`/`authenticated` roles; JPEG/PNG/WebP uploads are rotated, EXIF-stripped and owner-only; data persists across a DB restart.
+- **Live Supabase, 21 October:** migration 0005 applied; nine RLS tables with no client policies; private `incident-photos` bucket; TLS 1.3 `verify-full`. The API passed live uploads, metadata removal, logout 401, other-resident 404 and public/publishable-key denial, then cleaned up its synthetic data. Security Advisor: 0 errors, 0 warnings, 9 intentional "RLS enabled, no policy" notices. Do not add policies to silence them.
+- **Render, 21 October:** commit `5f37888` deployed; `/api/health` OK; three authenticated synthetic predictions returned. This shows availability, not accuracy.

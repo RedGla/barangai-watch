@@ -8,7 +8,7 @@ from datetime import timedelta
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,6 +21,8 @@ attempts = defaultdict(deque)
 
 
 class Credentials(BaseModel):
+    # Extra fields are kept so a supplied role can be refused explicitly rather than silently dropped.
+    model_config = ConfigDict(extra="allow")
     email: str = Field(min_length=3, max_length=320, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
     password: str = Field(min_length=12, max_length=128)
 
@@ -48,8 +50,14 @@ def rate_limit(request, action, count=10):
 def create_session(response, db, user):
     token = secrets.token_urlsafe(32)
     csrf = secrets.token_urlsafe(32)
-    db.add(LoginSession(token_hash=hashlib.sha256(token.encode()).hexdigest(), user_id=user.id,
-                        csrf_token=csrf, expires_at=now() + timedelta(days=7)))
+    db.add(
+        LoginSession(
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            user_id=user.id,
+            csrf_token=csrf,
+            expires_at=now() + timedelta(days=7),
+        )
+    )
     db.commit()
     secure = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
     response.set_cookie("session", token, httponly=True, secure=secure, samesite="lax", max_age=604800)
@@ -78,7 +86,11 @@ def require_role(user: User, roles):
 def require_csrf(request: Request, db: Session = Depends(get_db)):
     session = current_session(request, db)
     supplied = request.headers.get("X-CSRF-Token", "")
-    if not supplied or not secrets.compare_digest(supplied, session.csrf_token) or not secrets.compare_digest(request.cookies.get("csrf_token", ""), supplied):
+    if (
+        not supplied
+        or not secrets.compare_digest(supplied, session.csrf_token)
+        or not secrets.compare_digest(request.cookies.get("csrf_token", ""), supplied)
+    ):
         raise HTTPException(403, "Invalid CSRF token")
     return session.user
 
@@ -86,6 +98,8 @@ def require_csrf(request: Request, db: Session = Depends(get_db)):
 @router.post("/register", status_code=201)
 def register(credentials: Credentials, request: Request, response: Response, db: Session = Depends(get_db)):
     rate_limit(request, "register")
+    if any(key.strip().casefold() == "role" for key in credentials.model_extra or {}):
+        raise HTTPException(403, "Role cannot be selected")
     email = credentials.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(409, "Email already registered")

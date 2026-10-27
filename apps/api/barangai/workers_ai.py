@@ -11,6 +11,8 @@ TOPICS = (
     ("fallen trees", ("fallen tree", "natumbang puno")),
     ("uncollected garbage", ("garbage", "basura", "trash")),
     ("damaged signage", ("signage", "damaged sign", "karatula")),
+    ("broken streetlights", ("streetlight", "street light", "ilaw sa kalye", "poste")),
+    ("exposed wiring", ("wiring", "exposed wire", "live wire", "kawad", "kable", "kuryente")),
 )
 
 

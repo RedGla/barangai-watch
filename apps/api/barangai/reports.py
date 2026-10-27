@@ -12,7 +12,9 @@ from .media import delete_image, image_response, sanitize_image, save_image
 from .models import Report, ReportEvent, User, now, utc_iso
 
 router = APIRouter(prefix="/reports")
-CATEGORIES = {"flooding", "potholes", "fallen_trees", "uncollected_garbage", "damaged_signage"}
+# Resident and staff choices (AGENTS.md); the model predicts only its trained subset in inference.CATEGORIES.
+CATEGORIES = {"flooding", "fallen_trees", "broken_streetlights", "exposed_wiring", "potholes",
+              "uncollected_garbage", "damaged_signage", "other"}
 
 
 def serialize_report(report, detail=False):
@@ -51,7 +53,9 @@ def preview_prediction(request: Request, image: UploadFile = File(...), user: Us
     result = inference.predict(sanitized_upload(image))
     return {"prediction_available": result is not None,
             "model_category": result.category if result else None,
-            "confidence": result.confidence if result else None}
+            "confidence": result.confidence if result else None,
+            # Placeholder: a photo-to-text model will fill this; the resident edits whatever it writes.
+            "suggested_description": None}
 
 
 @router.post("", status_code=201)
