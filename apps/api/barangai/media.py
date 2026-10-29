@@ -125,4 +125,4 @@ def sanitize_image(data: bytes) -> bytes:
             ImageOps.exif_transpose(image).convert("RGB").save(output, format="JPEG", quality=85)
             return output.getvalue()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-        raise HTTPException(422, "Invalid image")
+        raise HTTPException(422, "Invalid image") from None

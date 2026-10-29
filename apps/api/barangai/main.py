@@ -8,10 +8,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .auth import attempts
 from .auth import router as auth_router
 from .body_limit import ReportBodyLimitMiddleware
+from .chat import router as chat_router
 from .checker import validate_configured_checker
 from .db import database_url, upgrade_sqlite
 from .duplicates import router as duplicates_router
-from .fallbacks import router as fallbacks_router
 from .geo import router as geo_router
 from .google_auth import router as google_router
 from .media import validate_storage_config
@@ -32,7 +32,7 @@ def create_app():
     app.include_router(google_router)
     app.include_router(reports_router)
     app.include_router(workflow_router)
-    app.include_router(fallbacks_router)
+    app.include_router(chat_router)
     app.include_router(duplicates_router)
     app.include_router(notifications_router)
     app.include_router(geo_router)

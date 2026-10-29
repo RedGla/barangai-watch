@@ -15,19 +15,11 @@ from dataclasses import dataclass
 
 import httpx
 
+from .models import CATEGORIES
+
 log = logging.getLogger(__name__)
 # Mistral Small 3.1: works on a Workers Free account (Gemma 3 is not allowed there) and is Apache-2.0.
 DEFAULT_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"
-CATEGORIES = (
-    "flooding",
-    "potholes",
-    "fallen_trees",
-    "uncollected_garbage",
-    "damaged_signage",
-    "broken_streetlights",
-    "exposed_wiring",
-    "other",
-)
 HAZARDS = ("electrical_hazard", "blocks_road", "risk_to_people")
 LANGUAGES = {"en": "English", "fil": "Filipino", "taglish": "Taglish"}
 UNSAFE_TEXT = re.compile(r"https?://|www\.|\b\+?\d[\d -]{6,}\d\b|@\w", re.I)

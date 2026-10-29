@@ -1,7 +1,5 @@
 import httpx
 import pytest
-from fastapi import HTTPException
-
 from conftest import register
 from test_reports import submit
 
@@ -127,6 +125,7 @@ def test_storage_delete_uses_recorded_location(client, photo, storage):
 @pytest.mark.parametrize("failure_mode", ["timeout", "server-error"])
 def test_accepted_upload_with_lost_response_is_cleaned_up(client, photo, storage, monkeypatch, failure_mode):
     import json
+
     from barangai import media
 
     register(client)
@@ -202,6 +201,7 @@ def test_rejected_upload_does_not_delete_conflicting_object(client, photo, stora
 def test_upload_keeps_health_responsive_while_storage_waits(client, photo, monkeypatch):
     import threading
     from concurrent.futures import ThreadPoolExecutor
+
     from barangai import reports
 
     register(client)

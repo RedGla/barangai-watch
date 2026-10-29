@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 import { post } from '../../lib/api'
 import { Txt, useLanguage, useText } from '../../lib/i18n'
 import { ResidentAccount } from '../../app/ResidentShell'
-import { categories, label } from './categories'
+import { categories, hazardLabels, label } from './categories'
 import { CategoryTile } from './CategoryIcon'
 import { MapPicker } from './MapPicker'
 import { photoCoordinates, useStreetName, type LocationSource } from './location'
@@ -33,7 +33,6 @@ import type { Category, Prediction, Report } from './types'
 
 const UNAVAILABLE: Prediction = { prediction_available: false, model_category: null, confidence: null }
 const NOT_FILLED = { category: false, description: false }
-const HAZARD_LABEL: Record<string, string> = { blocks_road: 'Blocks the road', risk_to_people: 'Risk to people' }
 const STEPS = ['Photo', 'Location', 'Details', 'Review'] as const
 const EASE = [0.22, 1, 0.36, 1] as const
 const PATH = ['Pending', 'Under Verification', 'Accepted', 'In Progress', 'Resolved']
@@ -81,6 +80,10 @@ export function ReportForm() {
   const [locationSource, setLocationSource] = useState<LocationSource>(null)
   const { language } = useLanguage()
   const streetName = useStreetName(latitude, longitude)
+  // A field counts as the AI's only while it still holds the AI's text: a choice the resident made while the
+  // photo was being checked is theirs, even though the AI's answer arrived afterwards.
+  const aiCategory = aiFilled.category && category === prediction?.model_category
+  const aiDescription = aiFilled.description && description === prediction?.suggested_description
   useEffect(() => {
     if (!photo || typeof URL.createObjectURL !== 'function') return
     const url = URL.createObjectURL(photo)
@@ -132,7 +135,7 @@ export function ReportForm() {
     setPhoto(null)
     setPreview('')
     setCategory('')
-    if (aiFilled.description) setDescription('')
+    if (aiDescription) setDescription('')
     setAiFilled(NOT_FILLED)
     setPrediction(null)
     setError('')
@@ -148,7 +151,15 @@ export function ReportForm() {
         setLatitude(String(coordinates[0]))
         setLongitude(String(coordinates[1]))
         setLocationSource('photo')
-      } else if (!validCoordinates(latitude, longitude)) locate(true)
+      } else if (locationSource === 'photo' || !validCoordinates(latitude, longitude)) {
+        // The pin came from the previous photo, so it may be somewhere else entirely.
+        if (locationSource === 'photo') {
+          setLatitude('')
+          setLongitude('')
+          setLocationSource(null)
+        }
+        locate(true)
+      }
     })
   }
   function placePin(lat: string, lng: string) {
@@ -373,7 +384,7 @@ export function ReportForm() {
                   <fieldset>
                     <legend className="mb-2 flex w-full items-center justify-between gap-2 px-1 text-[15px] font-semibold">
                       <Txt>Incident category</Txt>
-                      {aiFilled.category && <AiTag check={prediction?.needs_check} />}
+                      {aiCategory && <AiTag check={prediction?.needs_check} />}
                     </legend>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {categories.map(item => (
@@ -429,7 +440,7 @@ export function ReportForm() {
                             key={hazard}
                             className="rounded-full bg-[color-mix(in_oklab,var(--status-progress)_13%,transparent)] px-2 py-0.5 font-medium text-[var(--status-progress)]"
                           >
-                            <Txt>{HAZARD_LABEL[hazard] ?? hazard}</Txt>
+                            <Txt>{hazardLabels[hazard] ?? hazard}</Txt>
                           </span>
                         ))}
                     </p>
@@ -458,7 +469,7 @@ export function ReportForm() {
                   <label className="block space-y-2">
                     <span className="flex items-center justify-between gap-2 px-1 text-[15px] font-semibold">
                       <Txt>Description (optional)</Txt>
-                      {aiFilled.description && <AiTag check={prediction?.problem_seen === false} />}
+                      {aiDescription && <AiTag check={prediction?.problem_seen === false} />}
                     </span>
                     <Textarea
                       rows={2}
@@ -471,7 +482,7 @@ export function ReportForm() {
                         setAiFilled(current => ({ ...current, description: false }))
                       }}
                     />
-                    {!aiFilled.description && (
+                    {!aiDescription && (
                       <span className="hidden items-center gap-1.5 px-1 text-[13px] font-normal text-muted-foreground sm:flex">
                         <Sparkles className="size-3.5" aria-hidden="true" />
                         <Txt>The AI writes this from your photo when it can. Add a short note if it did not.</Txt>

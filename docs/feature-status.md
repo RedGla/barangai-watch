@@ -10,7 +10,7 @@ Updated 28 October 2026 (Asia/Manila). Local verification does not imply cloud o
 | P0 | Private sanitized images | Local and live Supabase upload/download privacy checks passed, including metadata removal, logout and cross-resident denial. Mocked-provider outage tests remain separate evidence. |
 | P0 | PostgreSQL migrations and photo persistence | Docker migration preservation/restart proof and live Supabase migration 0005/TLS/private Storage/client denial passed. Local API reload preserves live cloud reports/photos. Hosted application checks pending. |
 | P0 | Staff verification, status workflow, actions and history | Implemented and tested. No automatic forwarding. |
-| P0 | AI pre-fill and correction | Option C built and tested with mocked Cloudflare: vision model fills category, description and hazards; MobileCLIP2-S0 checker (ONNX, matches PyTorch exactly, ~70 ms locally) cross-checks and backs it up. Untuned prompts, uncalibrated 0.5 cutoff, no accuracy measured yet: run `apps/api/tools/evaluate_ai.py` on the group's verified datasets. Live Cloudflare call and Render timing unverified. |
+| P0 | AI pre-fill and correction | Option C built and tested with mocked Cloudflare: vision model fills category, description and hazards; MobileCLIP2-S0 checker (ONNX, matches PyTorch exactly, ~70 ms locally) cross-checks and backs it up. Untuned prompts, uncalibrated 0.5 cutoff, no accuracy measured yet: run `apps/api/tools/evaluate_ai.py` on the group's verified datasets. Live Cloudflare calls verified locally on 28 October with Mistral Small 3.1 (about 5 neurons and 2 s per photo; descriptions in English and Filipino; an intact road came back as "AI unsure"). Render timing unverified. |
 | P0 | Duplicate review | Algorithm/decisions tested; uses checker embeddings (`mobileclip2-s0:effec85f7f21`). Similarity cutoff (0.85) not yet checked on real near-duplicate photos. Original reports preserved. |
 | P0 | Hybrid chatbot and authorized tracking | Multilingual fallback and optional LLM adapter implemented/tested. Live optional provider unconfigured. |
 | P0 | Administrator deletion | Authenticated dry-run, exact confirmation and receipts implemented/tested with synthetic records. Retention policy needs operator approval. |
@@ -24,12 +24,13 @@ Updated 28 October 2026 (Asia/Manila). Local verification does not imply cloud o
 
 Public application deployment, hosted end-to-end privacy checks, physical-phone smoke tests and independent model evaluation remain unfinished. Live Supabase API integration passed separately. Do not present manual categorization as measured AI performance or provider integration as public website deployment evidence.
 
-Latest model evidence: [tree comparison and limitations](../ml/TRAINING-RESULTS-V4-2026-10-20.md). The four local tree photos show one storm event; 4/4 raw tree predictions are not broad reliability evidence and do not pass the demo confidence cutoff.
+Old EfficientNet classifier evidence (frozen and unused since option C): [tree comparison and limitations](../ml/TRAINING-RESULTS-V4-2026-10-20.md). The four local tree photos show one storm event; 4/4 raw tree predictions are not broad reliability evidence and do not pass the demo confidence cutoff.
 
 ## Evidence
 
 Synthetic data only. Raw evidence files live under the ignored `artifacts/` folder; superseded logs are in Git history before this file's 26 October update.
 
+- **Local, 29 October:** 123 API and 34 web tests, the typecheck and the production build passed after the bug-fix and cleanup pass.
 - **Local, 20 October:** 90 API, 18 web and 10 ML tests plus the production build passed. Real-browser smoke at 390×844 covered registration, gallery and camera-input uploads, the full staff status path, notifications, Filipino chat status and cross-resident photo denial (404).
 - **Docker PostgreSQL 16, 20 October** (`deploy/verify-local-postgres.py`): migrations 0003→0005 preserve a legacy row; RLS denies simulated `anon`/`authenticated` roles; JPEG/PNG/WebP uploads are rotated, EXIF-stripped and owner-only; data persists across a DB restart.
 - **Live Supabase, 21 October:** migration 0005 applied; nine RLS tables with no client policies; private `incident-photos` bucket; TLS 1.3 `verify-full`. The API passed live uploads, metadata removal, logout 401, other-resident 404 and public/publishable-key denial, then cleaned up its synthetic data. Security Advisor: 0 errors, 0 warnings, 9 intentional "RLS enabled, no policy" notices. Do not add policies to silence them.

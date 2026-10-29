@@ -34,7 +34,7 @@ def settings():
         return None
     try:
         uri = urlsplit(values["GOOGLE_REDIRECT_URI"])
-        uri.port  # Reject malformed ports before enabling the button.
+        uri.port  # noqa: B018  (reading it rejects malformed ports before enabling the button)
     except ValueError:
         return None
     local = uri.hostname in {"localhost", "127.0.0.1", "::1"}
@@ -49,9 +49,9 @@ def settings():
 
 def exchange_code(code, verifier, config):
     # Google maintains signature, audience, issuer and expiry validation.
+    import requests
     from google.auth.transport.requests import Request as GoogleRequest
     from google.oauth2 import id_token
-    import requests
 
     with httpx.Client(timeout=15) as client:
         response = client.post("https://oauth2.googleapis.com/token", data={

@@ -8,7 +8,7 @@ import { DateText } from '@/components/DateText'
 import { Alert } from '@/components/page'
 import { cn } from '@/lib/utils'
 import { Txt, useText } from '../../lib/i18n'
-import { categories, label } from './categories'
+import { categories, hazardLabels, label } from './categories'
 import { CategoryTile } from './CategoryIcon'
 import { STATUS_STYLE, StatusBadge } from './StatusBadge'
 import {
@@ -20,12 +20,6 @@ import {
   useReport,
 } from './queries'
 import type { Category, Duplicate, Report, StaffAction, Status } from './types'
-
-const HAZARD_LABEL: Record<string, string> = {
-  electrical_hazard: 'Electrical hazard',
-  blocks_road: 'Blocks the road',
-  risk_to_people: 'Risk to people',
-}
 
 /** Staff transitions follow the API's status graph; the server still enforces it. */
 function nextActions(status: Status): { label: string; status: Status }[] {
@@ -164,7 +158,7 @@ function ReportFacts({ detail }: { detail: Report }) {
               className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_oklab,var(--status-progress)_13%,transparent)] px-2 py-0.5 font-medium text-[var(--status-progress)]"
             >
               <TriangleAlert className="size-3" aria-hidden="true" />
-              <Txt>{HAZARD_LABEL[hazard]}</Txt>
+              <Txt>{hazardLabels[hazard] ?? hazard}</Txt>
             </span>
           ))}
         </p>

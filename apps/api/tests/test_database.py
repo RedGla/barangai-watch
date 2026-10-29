@@ -3,9 +3,8 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect
-
 from barangai.db import database_url, engine_for_url
+from sqlalchemy import inspect
 
 
 def migration_config(output=None):
@@ -24,8 +23,8 @@ def test_legacy_postgres_url_and_percent_encoded_password(monkeypatch):
 
 
 def test_postgres_migration_sql_protects_every_application_table(monkeypatch):
+    from barangai import models  # noqa: F401  (registers the application tables)
     from barangai.db import Base
-    from barangai import models  # Register the application tables.
 
     monkeypatch.setenv("DATABASE_URL", "postgres://synthetic:p%40ss@localhost/example")
     output = io.StringIO()
@@ -59,9 +58,8 @@ def test_sqlite_migration_upgrade_and_rollback_keep_existing_data(tmp_path, monk
 
 
 def test_sqlite_start_up_migrates_or_stamps_legacy_create_all_database(tmp_path, monkeypatch):
-    from barangai import models  # noqa: F401
     from alembic.script import ScriptDirectory
-
+    from barangai import models  # noqa: F401
     from barangai.db import Base, upgrade_sqlite
 
     head = ScriptDirectory.from_config(migration_config()).get_current_head()

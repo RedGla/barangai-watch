@@ -9,20 +9,9 @@ from . import ai, geo
 from .auth import get_current_user, rate_limit, require_csrf, require_role
 from .db import get_db
 from .media import delete_image, image_response, sanitize_image, save_image
-from .models import Report, ReportEvent, User, now, utc_iso
+from .models import CATEGORIES, Report, ReportEvent, User, utc_iso
 
 router = APIRouter(prefix="/reports")
-# Resident and staff choices (AGENTS.md); the AI (ai.py) suggests from the same eight.
-CATEGORIES = {
-    "flooding",
-    "fallen_trees",
-    "broken_streetlights",
-    "exposed_wiring",
-    "potholes",
-    "uncollected_garbage",
-    "damaged_signage",
-    "other",
-}
 
 
 def serialize_report(report, detail=False):
@@ -115,6 +104,9 @@ def submit_report(
     rate_limit(request, "upload")
     if not (-90 <= latitude <= 90 and -180 <= longitude <= 180) or resident_category not in CATEGORIES:
         raise HTTPException(422, "Invalid location or category")
+    description = description.strip() if description else None
+    if description and len(description) > 1000:
+        raise HTTPException(422, "Description is too long")
     sanitized = sanitized_upload(image)
     # The model's category, hazards, embedding and street name come from the server, never the client.
     analysis = ai.for_submission(sanitized)
@@ -123,7 +115,7 @@ def submit_report(
         latitude=latitude,
         longitude=longitude,
         resident_category=resident_category,
-        description=description,
+        description=description or None,
         image_path="",
         location_label=geo.lookup(latitude, longitude) if geo.enabled() else None,
         model_category=analysis.category,

@@ -1,7 +1,6 @@
 import httpx
-from conftest import register
-
 from barangai import geo
+from conftest import register
 
 
 def test_street_names_are_off_unless_configured(client):
@@ -73,3 +72,10 @@ def test_failed_lookups_are_retried(client, monkeypatch):
     monkeypatch.setattr(httpx, "get", fake_get)
     assert client.get("/geo/reverse", params={"lat": 3.0, "lng": 4.0}).json() == {"label": None}
     assert client.get("/geo/reverse", params={"lat": 3.0, "lng": 4.0}).json() == {"label": "Rizal Avenue"}
+
+
+def test_a_skipped_lookup_does_not_lengthen_the_queue(monkeypatch):
+    monkeypatch.setattr(geo.time, "monotonic", lambda: 100.0)
+    monkeypatch.setattr(geo, "_next_slot", 110.0)
+    assert geo.lookup(5.0, 6.0) is None
+    assert geo._next_slot == 110.0

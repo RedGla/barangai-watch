@@ -7,6 +7,7 @@ spends Cloudflare neurons again nor lets the client choose the model's category.
 """
 
 import hashlib
+import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +15,7 @@ from dataclasses import dataclass
 
 from . import checker, vision
 
+log = logging.getLogger(__name__)
 CACHE_SECONDS, CACHE_SIZE = 30 * 60, 128
 _cache: dict[str, tuple[float, "Analysis"]] = {}
 _lock = threading.Lock()
@@ -72,10 +74,19 @@ def photo_key(sanitized_image: bytes) -> str:
     return hashlib.sha256(sanitized_image).hexdigest()
 
 
+def safely(model, *args):
+    """A model's answer, or None if it failed unexpectedly: a broken suggestion never blocks a report."""
+    try:
+        return model(*args)
+    except Exception:
+        log.exception("%s.%s failed; the form continues without it", model.__module__, model.__name__)
+        return None
+
+
 def analyze(sanitized_image: bytes, language: str = "en") -> Analysis:
     """Preview: both models run side by side; the result waits in the cache for submission."""
-    seen = _pool.submit(vision.describe, sanitized_image, language)
-    checked = _pool.submit(checker.check, sanitized_image)
+    seen = _pool.submit(safely, vision.describe, sanitized_image, language)
+    checked = _pool.submit(safely, checker.check, sanitized_image)
     result = combine(seen.result(), checked.result())
     with _lock:
         now = time.monotonic()
@@ -93,7 +104,7 @@ def for_submission(sanitized_image: bytes) -> Analysis:
         cached = _cache.get(photo_key(sanitized_image))
     if cached and time.monotonic() - cached[0] <= CACHE_SECONDS:
         return cached[1]
-    return combine(None, checker.check(sanitized_image))
+    return combine(None, safely(checker.check, sanitized_image))
 
 
 def clear_cache() -> None:

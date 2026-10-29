@@ -173,3 +173,39 @@ describe('uncertain suggestions', () => {
     )
   })
 })
+
+describe('choices made while the photo is checked', () => {
+  it('keeps the resident category and does not label it as the AI suggestion', async () => {
+    exif.gps.mockResolvedValue({ latitude: 14.32941, longitude: 120.93672 })
+    let answer: (value: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith('/auth/me')) return Response.json({ id: 'r1', email: 'resident@example.test', role: 'resident' })
+        if (url.endsWith('/reports/predict')) return new Promise<Response>(resolve => (answer = resolve))
+        return Response.json([])
+      }),
+    )
+    render(<App />)
+    fireEvent.change(await screen.findByLabelText(/incident photo/i), { target: { files: [photo()] } })
+    await waitFor(() => expect(exif.gps).toHaveBeenCalled())
+    next()
+    await screen.findByText('From your photo', { exact: false })
+    next()
+    fireEvent.click(await screen.findByRole('radio', { name: 'Potholes' }))
+    answer(
+      Response.json({
+        prediction_available: true,
+        model_category: 'flooding',
+        confidence: 0.8,
+        needs_check: false,
+        problem_seen: true,
+        hazards: [],
+      }),
+    )
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(screen.getByRole('radio', { name: 'Potholes' })).toBeChecked()
+    expect(screen.queryByText(/Filled by AI|AI unsure/)).toBeNull()
+  })
+})

@@ -1,5 +1,5 @@
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 from conftest import register
 
@@ -21,8 +21,8 @@ def test_submission_records_pending_and_manual_fallback(client, photo):
     assert report["resident_category"] == "flooding"
     assert report["verified_category"] is None
     assert report["events"][0]["to_status"] == "Pending"
-    assert datetime.fromisoformat(report["created_at"]).utcoffset() == timezone.utc.utcoffset(None)
-    assert datetime.fromisoformat(report["events"][0]["created_at"]).utcoffset() == timezone.utc.utcoffset(None)
+    assert datetime.fromisoformat(report["created_at"]).utcoffset() == UTC.utcoffset(None)
+    assert datetime.fromisoformat(report["events"][0]["created_at"]).utcoffset() == UTC.utcoffset(None)
     assert len(client.get("/reports").json()) == 1
     assert client.get(f'/reports/{report["id"]}/image').status_code == 200
 
@@ -56,6 +56,7 @@ def test_image_metadata_is_removed(client, photo):
 
 def test_camera_photo_rotation_is_applied_before_stripping_metadata(client):
     import io
+
     from PIL import Image
     output = io.BytesIO()
     orientation = Image.Exif()
@@ -91,3 +92,10 @@ def test_paper_categories_and_other_are_accepted_but_unknown_is_refused(client, 
         assert response.status_code == 201, response.text
         assert response.json()["resident_category"] == category
     assert submit(client, photo, resident_category="earthquake").status_code == 422
+
+
+def test_descriptions_are_trimmed_and_capped(client, photo):
+    register(client)
+    assert submit(client, photo, description="  Synthetic blocked drain  ").json()["description"] == "Synthetic blocked drain"
+    assert submit(client, photo, description="   ").json()["description"] is None
+    assert submit(client, photo, description="x" * 1001).status_code == 422

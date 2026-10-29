@@ -1,19 +1,31 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
 
+# Report categories (AGENTS.md): residents, staff and both AI models choose from the same eight.
+CATEGORIES = (
+    "flooding",
+    "potholes",
+    "fallen_trees",
+    "uncollected_garbage",
+    "damaged_signage",
+    "broken_streetlights",
+    "exposed_wiring",
+    "other",
+)
+
 
 def now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def utc_iso(value: datetime):
     # SQLite drops timezone data on read; stored naive values still represent UTC.
-    return value.replace(tzinfo=timezone.utc).isoformat() if value.tzinfo is None else value.astimezone(timezone.utc).isoformat()
+    return value.replace(tzinfo=UTC).isoformat() if value.tzinfo is None else value.astimezone(UTC).isoformat()
 
 
 def uid():

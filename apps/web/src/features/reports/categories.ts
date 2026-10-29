@@ -1,4 +1,4 @@
-import type { Category, Status } from './types'
+import type { Category, Hazard, Status } from './types'
 
 export const categories: { value: Category; label: string }[] = [
   { value: 'flooding', label: 'Flooding' },
@@ -15,3 +15,9 @@ export const statuses: Status[] = ['Pending', 'Under Verification', 'Accepted', 
 
 export const label = (category?: Category | null) =>
   categories.find(item => item.value === category)?.label ?? 'Not set'
+
+export const hazardLabels: Record<Hazard, string> = {
+  electrical_hazard: 'Electrical hazard',
+  blocks_road: 'Blocks the road',
+  risk_to_people: 'Risk to people',
+}

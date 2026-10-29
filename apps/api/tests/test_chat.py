@@ -1,8 +1,8 @@
+import httpx
+import pytest
 from conftest import register
 from test_reports import submit
 from test_workflow import staff_login
-import httpx
-import pytest
 
 
 def chat(client, message, language="en", report_id=None):
@@ -43,7 +43,7 @@ def test_workers_ai_receives_only_curated_topic_and_language(client, monkeypatch
 
     def fake_post(url, **kwargs):
         seen.append((url, kwargs))
-        assert url == f"https://api.cloudflare.com/client/v4/accounts/{'a' * 32}/ai/run/@cf/aisingapore/gemma-sea-lion-v4-27b-it"
+        assert url == f"https://api.cloudflare.com/client/v4/accounts/{'a' * 32}/ai/run/@cf/mistralai/mistral-small-3.1-24b-instruct"
         assert kwargs["timeout"] == 8.0
         assert kwargs["headers"]["Authorization"] == "Bearer synthetic-token"
         outgoing = str(kwargs["json"])

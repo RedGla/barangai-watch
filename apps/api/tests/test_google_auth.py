@@ -1,16 +1,16 @@
-import hashlib
 import base64
+import hashlib
 import time
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-
 from barangai import google_auth
-from barangai.auth import attempts, hasher, router as auth_router
+from barangai.auth import attempts, hasher
+from barangai.auth import router as auth_router
 from barangai.db import Base, database_url, engine_for_url, session_for_url
 from barangai.models import OAuthIdentity, User
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -151,8 +151,8 @@ def test_cancelled_sign_in_consumes_state(configured):
 
 @pytest.mark.parametrize("invalid", [None, "audience", "expired", "issuer", "signature"])
 def test_exchange_uses_pkce_and_google_library_validation(configured, monkeypatch, invalid):
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
     from google.auth import crypt, jwt
     from google.oauth2 import id_token
 
@@ -192,7 +192,7 @@ def test_exchange_uses_pkce_and_google_library_validation(configured, monkeypatc
 
     monkeypatch.setattr(google_auth.httpx, "Client", FakeHTTP)
     if invalid:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017  (any rejection will do)
             google_auth.exchange_code("synthetic-code", "synthetic-verifier", google_auth.settings())
     else:
         assert google_auth.exchange_code("synthetic-code", "synthetic-verifier", google_auth.settings())["sub"] == "synthetic-subject"

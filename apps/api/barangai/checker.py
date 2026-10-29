@@ -16,17 +16,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageOps
 
+from .models import CATEGORIES
+
 log = logging.getLogger(__name__)
-CATEGORIES = (
-    "flooding",
-    "potholes",
-    "fallen_trees",
-    "uncollected_garbage",
-    "damaged_signage",
-    "broken_streetlights",
-    "exposed_wiring",
-    "other",
-)
 
 
 @dataclass(frozen=True)

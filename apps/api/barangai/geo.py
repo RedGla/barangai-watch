@@ -46,16 +46,16 @@ def lookup(lat: float, lng: float) -> str | None:
     """Street name near a point, or None. Only successful answers are cached, so a timeout is retried later."""
     global _next_slot
     key = (round(lat, 4), round(lng, 4))
-    if key in _cache:
-        return _cache[key]
     # The lock only hands out one-second slots; the wait and the request happen outside it, so a slow
     # Nominatim never holds other requests' threads.
     with _lock:
+        if key in _cache:
+            return _cache[key]
         slot = max(time.monotonic(), _next_slot)
+        if slot - time.monotonic() > 3:
+            return None  # a queue is building up; skip without claiming a slot, so the queue can drain
         _next_slot = slot + 1.0
     wait = slot - time.monotonic()
-    if wait > 3:
-        return None  # a queue is building up; skip rather than tie up a thread
     if wait > 0:
         time.sleep(wait)
     contact = os.environ.get("GEOCODER_CONTACT", "")
@@ -73,14 +73,16 @@ def lookup(lat: float, lng: float) -> str | None:
     address = data.get("address") if isinstance(data, dict) else None
     label = label_from(address) if isinstance(address, dict) else None
     if label:
-        if len(_cache) >= CACHE_SIZE:
-            _cache.pop(next(iter(_cache)))
-        _cache[key] = label
+        with _lock:
+            if len(_cache) >= CACHE_SIZE:
+                _cache.pop(next(iter(_cache)))
+            _cache[key] = label
     return label
 
 
 def clear_cache() -> None:
-    _cache.clear()
+    with _lock:
+        _cache.clear()
 
 
 @router.get("/reverse")

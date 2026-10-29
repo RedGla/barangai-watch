@@ -4,7 +4,7 @@ Community incident reporting for a single Philippine barangay, prepared for an a
 
 ## Current state
 
-The local application includes resident, staff and administrator permissions, private sanitized photo uploads, ownership checks, status transitions, actions and audit history. Residents can choose an existing photo or use a camera input, preview the selection and submit it. Reviewed v3 model weights and measured development results exist privately; the local presentation launcher enables AI suggestions. Both models missed the two held-out tree images, so staff verification remains essential. Embedding quality for duplicate review is not validated. Chat supports English, Filipino and Taglish with authorized tracking and optional Workers AI guidance. The public demo is [BarangAI](https://barangai-watch.onrender.com). The reviewed AI image was deployed on 21 October 2026; three authenticated synthetic photo previews returned predictions successfully.
+The local application includes resident, staff and administrator permissions, private sanitized photo uploads, ownership checks, status transitions, actions and audit history. Residents can choose an existing photo or use a camera input, preview the selection and submit it. After a photo is chosen, the AI fills in the category, a short description, hazard flags and the location (see [Local presentation with AI](#local-presentation-with-ai)); residents review and edit all of it, and staff verify every report. Its accuracy has not been measured yet, and embedding quality for duplicate review is not validated. Chat supports English, Filipino and Taglish with authorized tracking and optional Workers AI guidance. The public demo is [BarangAI](https://barangai-watch.onrender.com). The reviewed AI image was deployed on 21 October 2026; three authenticated synthetic photo previews returned predictions successfully.
 
 The staff portal includes filters, category counts, a seven-day trend and an incident map. In-app notifications record status changes and read/unread state. The interface supports English and Filipino. Resident Google sign-in is implemented and hidden until credentials are configured. The administrator [deletion command](docs/data-deletion.md) defaults to a dry run and requires explicit confirmation.
 
@@ -55,7 +55,7 @@ cd ../..
 .\deploy\start-local.ps1
 ```
 
-Open `http://127.0.0.1:8000`. The launcher serves the built website and API together and always uses the local SQLite database and private image folder. For Cloudflare descriptions, set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WORKERS_AI_TOKEN` in the same shell first; without them only the checker runs. Use `-Port 8001` if port 8000 is busy.
+Open `http://127.0.0.1:8000`. The launcher serves the built website and API together and always uses the local SQLite database and private image folder. For Cloudflare descriptions, put `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WORKERS_AI_TOKEN` in the git-ignored `.env` file at the repo root (see [`.env.example`](.env.example)); the launcher reads only those keys, the Google ones and `GEOCODER_CONTACT`, and prints whether Cloudflare is on. Without them only the checker runs. Use `-Port 8001` if port 8000 is busy.
 
 The checker's 0.5 cutoff and prompts are untuned, and no accuracy has been measured yet. Residents review and edit every suggestion; staff verify every report. To compare the Cloudflare models and tune the checker on labelled photos, see [apps/api/tools/evaluate_ai.py](apps/api/tools/evaluate_ai.py).
 

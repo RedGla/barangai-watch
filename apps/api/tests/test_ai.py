@@ -128,7 +128,6 @@ def test_submission_without_preview_runs_only_the_local_checker(client, photo, m
 
 def test_street_name_comes_from_the_server_not_the_client(client, photo, monkeypatch):
     import httpx
-
     from barangai import geo
 
     monkeypatch.setenv("GEOCODER", "nominatim")
@@ -349,3 +348,17 @@ def test_streetlights_are_always_confirmed_by_the_resident():
 def test_checker_only_guesses_are_marked_to_check():
     result = ai.combine(None, checker.CheckerResult("potholes", 0.9, [1.0], "clip-v1"))
     assert (result.category, result.source, result.needs_check) == ("potholes", "checker", True)
+
+
+def test_a_crashing_model_never_blocks_the_form(client, photo, monkeypatch):
+    def broken(*args, **kwargs):
+        raise AttributeError("unexpected reply shape")
+
+    fake_models(monkeypatch, checked=checker.CheckerResult("potholes", 0.7, [0.6, 0.8], "clip-v1"))
+    monkeypatch.setattr(vision, "describe", broken)
+    register(client)
+    data = preview(client, photo).json()
+    assert data["model_category"] == "potholes" and data["category_source"] == "checker"
+    monkeypatch.setattr(checker, "check", broken)
+    ai.clear_cache()
+    assert submit(client, photo).status_code == 201

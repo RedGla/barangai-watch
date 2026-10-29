@@ -1,6 +1,5 @@
-from fastapi.testclient import TestClient
-
 from barangai.main import create_app
+from fastapi.testclient import TestClient
 
 
 def test_docs_reference_openapi_beneath_reverse_proxy_prefix(monkeypatch):

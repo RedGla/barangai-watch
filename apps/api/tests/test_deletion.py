@@ -2,9 +2,8 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func, select
-
 from conftest import register
+from sqlalchemy import func, select
 from test_reports import submit
 
 
