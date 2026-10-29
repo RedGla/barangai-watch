@@ -19,11 +19,15 @@ def client(tmp_path, monkeypatch):
     monkeypatch.delenv("CLOUDFLARE_ACCOUNT_ID", raising=False)
     monkeypatch.delenv("CLOUDFLARE_WORKERS_AI_TOKEN", raising=False)
     for name in ("MODEL_CHECKPOINT", "MODEL_APPROVED_SHA256", "MODEL_CONFIDENCE_THRESHOLD",
-                 "VALIDATED_EMBEDDING_MODEL_VERSION"):
+                 "VALIDATED_EMBEDDING_MODEL_VERSION", "CHECKER_MODEL_DIR", "CLOUDFLARE_VISION_MODEL", "GEOCODER"):
         monkeypatch.delenv(name, raising=False)
     for name in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"):
         monkeypatch.delenv(name, raising=False)
+    from barangai import ai, geo
     from barangai.main import create_app
+
+    ai.clear_cache()
+    geo.clear_cache()
 
     with TestClient(create_app()) as test_client:
         yield test_client

@@ -7,6 +7,7 @@ export type Category =
   | 'uncollected_garbage'
   | 'damaged_signage'
   | 'other'
+export type Hazard = 'electrical_hazard' | 'blocks_road' | 'risk_to_people'
 export type Status = 'Pending' | 'Under Verification' | 'Accepted' | 'In Progress' | 'Resolved' | 'Rejected'
 export type ReportEvent = { id?: string; to_status?: Status; created_at?: string; note?: string }
 export type StaffAction = { id: string; kind: 'action' | 'coordination'; note: string; created_at: string }
@@ -30,6 +31,8 @@ export type Report = {
   description?: string | null
   latitude?: number
   longitude?: number
+  location_label?: string | null
+  hazards?: Hazard[]
   created_at?: string
   events?: ReportEvent[]
   actions?: StaffAction[]
@@ -39,4 +42,8 @@ export type Prediction = {
   model_category: Category | null
   confidence: number | null
   suggested_description?: string | null
+  // 'agreed' (both models), 'vision' (Cloudflare only), 'checker' (MobileCLIP only)
+  category_source?: 'agreed' | 'vision' | 'checker' | null
+  needs_check?: boolean
+  hazards?: Hazard[]
 }

@@ -1,17 +1,17 @@
 # Feature status
 
-Updated 26 October 2026 (Asia/Manila). Local verification does not imply cloud or physical-device validation.
+Updated 28 October 2026 (Asia/Manila). Local verification does not imply cloud or physical-device validation.
 
 | Priority | Capability | State |
 | --- | --- | --- |
 | P0 | Resident/password sessions, roles and ownership | Implemented and API tested. |
 | P0 | Camera input and existing-photo uploads | Implemented; both submitted in the real local browser at phone-sized width. Physical camera check pending. |
-| P0 | GPS, map pin and coordinates | Implemented; hosted phone permission checks pending. |
+| P0 | GPS, map pin and coordinates | Pin pre-filled from photo GPS, then phone GPS; street name via Nominatim; manual pin/coordinates remain. Tested in jsdom; physical-phone and hosted geocoder checks pending. |
 | P0 | Private sanitized images | Local and live Supabase upload/download privacy checks passed, including metadata removal, logout and cross-resident denial. Mocked-provider outage tests remain separate evidence. |
 | P0 | PostgreSQL migrations and photo persistence | Docker migration preservation/restart proof and live Supabase migration 0005/TLS/private Storage/client denial passed. Local API reload preserves live cloud reports/photos. Hosted application checks pending. |
 | P0 | Staff verification, status workflow, actions and history | Implemented and tested. No automatic forwarding. |
-| P0 | AI classification and correction | v3 retained locally after completed 199-image tree comparison. Validation-selected v4 gets 1/2 old test trees and 10/12 reserved photos, but adds tree false alarms and accepts zero suggestions at 0.8. No replacement justified. Real-checkpoint API/manual fallback proof exists; cutoff uncalibrated. See v4 report. |
-| P0 | Duplicate review | Algorithm/decisions tested; validated embeddings and quality measurement missing. Original reports preserved. |
+| P0 | AI pre-fill and correction | Option C built and tested with mocked Cloudflare: vision model fills category, description and hazards; MobileCLIP2-S0 checker (ONNX, matches PyTorch exactly, ~70 ms locally) cross-checks and backs it up. Untuned prompts, uncalibrated 0.5 cutoff, no accuracy measured yet: run `apps/api/tools/evaluate_ai.py` on the group's verified datasets. Live Cloudflare call and Render timing unverified. |
+| P0 | Duplicate review | Algorithm/decisions tested; uses checker embeddings (`mobileclip2-s0:effec85f7f21`). Similarity cutoff (0.85) not yet checked on real near-duplicate photos. Original reports preserved. |
 | P0 | Hybrid chatbot and authorized tracking | Multilingual fallback and optional LLM adapter implemented/tested. Live optional provider unconfigured. |
 | P0 | Administrator deletion | Authenticated dry-run, exact confirmation and receipts implemented/tested with synthetic records. Retention policy needs operator approval. |
 | P1 | Resident Google sign-in | Implemented/tested; OAuth client and hosted callback check pending. |

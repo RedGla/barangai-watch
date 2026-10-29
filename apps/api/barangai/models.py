@@ -60,6 +60,10 @@ class Report(Base):
     image_path: Mapped[str] = mapped_column(Text, nullable=False)
     image_embedding: Mapped[list[float] | None] = mapped_column(JSON)
     embedding_model_version: Mapped[str | None] = mapped_column(String(100))
+    # Street name for the pin, from reverse geocoding; shown to the resident before submitting.
+    location_label: Mapped[str | None] = mapped_column(String(200))
+    # Safety flags from the vision model's own analysis of the photo, never from the client.
+    hazards: Mapped[list[str] | None] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
     events: Mapped[list["ReportEvent"]] = relationship(order_by="ReportEvent.created_at", cascade="all, delete-orphan")

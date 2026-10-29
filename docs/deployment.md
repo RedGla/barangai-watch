@@ -14,13 +14,11 @@ Follow [Render setup](render-setup.md), [Supabase setup](supabase-setup.md), and
 
 ## AI readiness
 
-The Render image packages the reviewed EfficientNet-B0 v3 checkpoint, CPU Torch 2.11.0 and TorchVision 0.26.0. It supplies `MODEL_CHECKPOINT`, `MODEL_APPROVED_SHA256` and the demo-only `MODEL_CONFIDENCE_THRESHOLD=0.8` as image defaults, so the same build enables predictions for an existing service without a separate Blueprint sync. A build-time hash check and the API's startup validation reject incorrect weights. Remove any old empty overrides of these three variables in the service settings; an empty `MODEL_CHECKPOINT` explicitly disables inference.
+The Render image runs the category checker on ONNX Runtime only (no PyTorch): `CHECKER_MODEL_DIR=/app/models/mobileclip2-s0`, build-time SHA-256 checks of `visual.onnx` and `checker.json`, and `VALIDATED_EMBEDDING_MODEL_VERSION=mobileclip2-s0:effec85f7f21` so duplicate review uses its embeddings. `GEOCODER=nominatim` turns on street names; set `GEOCODER_CONTACT` to a contact email for Nominatim's usage policy.
 
-Thread counts are limited to one and the service still starts one application worker. Verify the image under the Free plan's memory and CPU limits before release, then verify the actual hosted prediction endpoint after an authorized deployment. Local evidence does not establish hosted behavior. See [model notes](../models/README.md) and [latest model comparison](../ml/TRAINING-RESULTS-V4-2026-10-20.md) for measured classification limitations. Manual categorization remains available; automatic duplicate suggestions still require validated embeddings.
+The vision model runs only when `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WORKERS_AI_TOKEN` are set (the chatbot's account). `CLOUDFLARE_VISION_MODEL` picks the model (default `@cf/google/gemma-3-12b-it`). The free tier is 10,000 neurons a day, shared with the chatbot, and never bills on the Workers Free plan (check the account's plan: Workers Paid bills overage); when it runs out the checker fills the category and the description stays empty. Llama 3.2 Vision needs a one-time licence acceptance call (`{"prompt": "agree"}`) before use.
 
-Use the [ML commands](../ml/README.md) to train both approved architectures. Choose uncertainty thresholds using validation predictions only; reserve the test set for final evaluation. Record actual accuracy, macro F1, class metrics, confusion matrix, size, memory, cold-start and latency measurements. If the model cannot fit the approved zero-cost hosting, document the measured limitation and obtain approval before changing architecture or scope.
-
-The inference adapter checks trusted file digest, architecture, classes and preprocessing before loading. Its configuration remains optional for local development. Embedding-based duplicates additionally require VALIDATED_EMBEDDING_MODEL_VERSION; do not set it until embedding quality is independently validated.
+Before release, measure checker latency and memory under the Free plan's limits, and confirm one live Cloudflare call. Re-export the checker with `apps/api/tools/export_checker.py` after changing its prompts; that changes the embedding version, so update the variable above and regenerate duplicate suggestions.
 
 ## Data and operating limits
 

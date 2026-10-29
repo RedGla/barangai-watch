@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { ImageOff, MapPin, Sparkles } from 'lucide-react'
+import { ImageOff, MapPin, Sparkles, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -20,6 +20,12 @@ import {
   useReport,
 } from './queries'
 import type { Category, Duplicate, Report, StaffAction, Status } from './types'
+
+const HAZARD_LABEL: Record<string, string> = {
+  electrical_hazard: 'Electrical hazard',
+  blocks_road: 'Blocks the road',
+  risk_to_people: 'Risk to people',
+}
 
 /** Staff transitions follow the API's status graph; the server still enforces it. */
 function nextActions(status: Status): { label: string; status: Status }[] {
@@ -148,18 +154,40 @@ function ReportFacts({ detail }: { detail: Report }) {
           </div>
         ))}
       </dl>
+      {detail.hazards && detail.hazards.length > 0 && (
+        <p className="flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
+          <Sparkles className="size-3.5" aria-hidden="true" />
+          <Txt>The AI noticed:</Txt>
+          {detail.hazards.map(hazard => (
+            <span
+              key={hazard}
+              className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_oklab,var(--status-progress)_13%,transparent)] px-2 py-0.5 font-medium text-[var(--status-progress)]"
+            >
+              <TriangleAlert className="size-3" aria-hidden="true" />
+              <Txt>{HAZARD_LABEL[hazard]}</Txt>
+            </span>
+          ))}
+        </p>
+      )}
       {(detail.description || detail.latitude != null) && (
         <Panel>
           {detail.description && <p className="text-[16px]">{detail.description}</p>}
           {detail.latitude != null && detail.longitude != null && (
             <p
               className={cn(
-                'flex items-center gap-1.5 font-mono text-[14px] text-muted-foreground',
+                'flex items-start gap-1.5 text-[14px] text-muted-foreground',
                 detail.description && 'mt-3 border-t pt-3',
               )}
             >
-              <MapPin className="size-4 shrink-0" aria-hidden="true" /> {detail.latitude.toFixed(5)},{' '}
-              {detail.longitude.toFixed(5)}
+              <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>
+                {detail.location_label && (
+                  <span className="block font-medium text-foreground">{detail.location_label}</span>
+                )}
+                <span className="font-mono">
+                  {detail.latitude.toFixed(5)}, {detail.longitude.toFixed(5)}
+                </span>
+              </span>
             </p>
           )}
         </Panel>

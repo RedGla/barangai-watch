@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory() as directory:
     with TestClient(app) as client:
         assert client.get("/").status_code == 200
         assert client.get("/api/health").json() == {"status": "ok"}
-        assert client.get("/models/efficientnet_b0-v3.pt").status_code == 404
+        assert client.get("/models/mobileclip2-s0/visual.onnx").status_code == 404
         image = io.BytesIO()
         metadata = Image.Exif()
         metadata[270] = "Synthetic private image description"

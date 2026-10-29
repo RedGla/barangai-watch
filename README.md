@@ -43,12 +43,11 @@ cd ../apps/web; npm test; npm run build
 
 ## Local presentation with AI
 
-The reviewed checkpoint is included in this private repository at [models/efficientnet_b0-v3.pt](models/efficientnet_b0-v3.pt). See its [model notes](models/README.md) for the approved hash, measured limits and private-use scope. Install the CPU runtime in the project environment, then build and start:
+The report AI has two parts. A Cloudflare Workers AI vision model reads the cleaned photo and fills in the category, a short description and hazard flags. A MobileCLIP2-S0 checker ([apps/api/models/mobileclip2-s0](apps/api/models/mobileclip2-s0), Apple research-only licence) runs locally on ONNX Runtime, cross-checks the category and stands in when Cloudflare is unavailable. Location comes from the photo's GPS, then the phone's, with street names from OpenStreetMap.
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e './apps/api[test]'
-.\.venv\Scripts\python.exe -m pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python.exe -m pip install -e './apps/api[test,ai]'
 cd apps/web
 npm ci
 npm run build
@@ -56,17 +55,8 @@ cd ../..
 .\deploy\start-local.ps1
 ```
 
-Open `http://127.0.0.1:8000`. The launcher serves the built website and API together, uses the approved checkpoint hash, and always uses the local SQLite database and private image folder. It overrides remote database/storage settings in its process so presentation reports stay local. Stop with Ctrl+C. This launcher binds only to this computer; phone access still requires a trusted reachable HTTPS deployment. Use `.\deploy\start-local.ps1 -Port 8001` if port 8000 is occupied.
+Open `http://127.0.0.1:8000`. The launcher serves the built website and API together and always uses the local SQLite database and private image folder. For Cloudflare descriptions, set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WORKERS_AI_TOKEN` in the same shell first; without them only the checker runs. Use `-Port 8001` if port 8000 is busy.
 
-The `0.8` confidence cutoff is a presentation guard, **not a calibrated production threshold**. Suggestions can be wrong even at high confidence. Residents can choose another category; personnel verify independently. Runtime inference errors fall back to manual reporting. Bad checkpoint hashes, missing dependencies and invalid model configuration still stop startup.
-
-To exercise the real checkpoint through the API with synthetic test photos:
-
-```powershell
-$env:BARANGAI_TEST_CHECKPOINT = (Resolve-Path 'models/efficientnet_b0-v3.pt').Path
-$env:OMP_NUM_THREADS = '2'
-$env:MKL_NUM_THREADS = '2'
-.\.venv\Scripts\python.exe -m pytest apps/api/tests/test_real_model.py -q
-```
+The checker's 0.5 cutoff and prompts are untuned, and no accuracy has been measured yet. Residents review and edit every suggestion; staff verify every report. To compare the Cloudflare models and tune the checker on labelled photos, see [apps/api/tools/evaluate_ai.py](apps/api/tools/evaluate_ai.py).
 
 For ML data, rights and commands, see [`ml/README.md`](ml/README.md). The [evaluation pack](docs/evaluation.md) contains blank participant tasks, questionnaires and technical cases. Publishing needs the intended Git repository, Render/Supabase access and explicit authorization. Deployment-host measurements and independent Philippine evaluation remain outstanding.
