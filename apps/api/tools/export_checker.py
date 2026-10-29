@@ -3,7 +3,8 @@
 The API's category checker (barangai/checker.py) then needs only onnxruntime, numpy and Pillow: no torch,
 no text encoder at runtime. Run from the repo root with the project venv (needs open_clip_torch, onnx):
 
-    .venv/Scripts/python.exe apps/api/tools/export_checker.py
+    .venv/Scripts/python.exe apps/api/tools/export_checker.py                 # model and prompts
+    .venv/Scripts/python.exe apps/api/tools/export_checker.py --prompts-only  # prompts only
 
 Weights: timm/MobileCLIP2-S0-OpenCLIP on Hugging Face, Apple ML research licence (apple-amlr): research use
 only, which covers this academic prototype. Change PROMPTS below and re-run to retune the checker.
@@ -11,6 +12,7 @@ only, which covers this academic prototype. Change PROMPTS below and re-run to r
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import open_clip
@@ -71,8 +73,18 @@ PROMPTS = {
         "a damaged public bench or railing",
         "an obstruction blocking a sidewalk",
     ],
+    # Normal, working versions of each category's object, so an intact streetlight or sign is not read as broken.
     "background": [
         "a clean street with nothing wrong",
+        "a working streetlight on a lamp post",
+        "a street lamp standing upright in daylight",
+        "an intact, readable street sign",
+        "a clean new road sign",
+        "a healthy tree standing beside a road",
+        "a smooth, undamaged paved road",
+        "a tidy closed garbage bin",
+        "power lines neatly strung between poles",
+        "a dry street on a sunny day",
         "a selfie of a person",
         "a screenshot of a phone screen",
         "a document or a page of text",
@@ -104,16 +116,18 @@ def main() -> None:
             classes.append({"key": key, "embedding": [round(v, 6) for v in centroid.tolist()]})
     OUT.mkdir(parents=True, exist_ok=True)
     onnx_path = OUT / "visual.onnx"
-    torch.onnx.export(
-        NormalizedVisual(model.visual),
-        torch.zeros(1, 3, SIZE, SIZE),
-        onnx_path,
-        input_names=["pixels"],
-        output_names=["embedding"],
-        dynamic_axes={"pixels": {0: "batch"}, "embedding": {0: "batch"}},
-        opset_version=17,
-        dynamo=False,
-    )
+    # --prompts-only keeps the existing image model: the embedding version (and duplicate review) stay valid.
+    if "--prompts-only" not in sys.argv or not onnx_path.is_file():
+        torch.onnx.export(
+            NormalizedVisual(model.visual),
+            torch.zeros(1, 3, SIZE, SIZE),
+            onnx_path,
+            input_names=["pixels"],
+            output_names=["embedding"],
+            dynamic_axes={"pixels": {0: "batch"}, "embedding": {0: "batch"}},
+            opset_version=17,
+            dynamo=False,
+        )
     digest = hashlib.sha256(onnx_path.read_bytes()).hexdigest()
     meta = {
         "model": f"{MODEL}/{PRETRAINED}",

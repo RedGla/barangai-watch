@@ -25,7 +25,8 @@ class Analysis:
     category: str | None
     confidence: float | None  # the checker's, when it ran; the vision model gives no usable confidence
     source: str | None  # "agreed", "vision", "checker" or None
-    needs_check: bool  # the two models disagree, so the form asks the resident to look again
+    needs_check: bool  # the form asks the resident to look again (see combine)
+    problem_seen: bool  # False when nothing in the photo looks broken; the category is then only a guess
     description: str | None
     hazards: tuple[str, ...]
     embedding: list[float] | None
@@ -33,25 +34,33 @@ class Analysis:
 
     @property
     def available(self) -> bool:
-        return self.source is not None or self.embedding is not None
+        return self.source is not None or self.embedding is not None or not self.problem_seen
+
+
+# A daytime photo cannot show whether a streetlight works, so this category is always confirmed by the resident.
+ALWAYS_CHECK = {"broken_streetlights"}
 
 
 def combine(seen: vision.VisionResult | None, checked: checker.CheckerResult | None) -> Analysis:
     vision_category = seen.category if seen else None
     checker_category = checked.category if checked else None
+    uncertain = bool(seen and not seen.problem_seen)
     if vision_category:
         category = vision_category
         source = "agreed" if checker_category == vision_category else "vision"
-        needs_check = checker_category is not None and checker_category != vision_category
+        # Nothing looks broken, or the two models disagree: keep the guess but ask the resident to verify it.
+        needs_check = uncertain or (checker_category is not None and checker_category != vision_category)
     elif checker_category:
-        category, source, needs_check = checker_category, "checker", False
+        # The checker alone is the weaker model: its guess is always shown as one to check.
+        category, source, needs_check = checker_category, "checker", True
     else:
         category, source, needs_check = None, None, False
     return Analysis(
         category=category,
         confidence=checked.confidence if checked else None,
         source=source,
-        needs_check=needs_check,
+        needs_check=needs_check or category in ALWAYS_CHECK,
+        problem_seen=not uncertain,
         description=seen.description if seen else None,
         hazards=seen.hazards if seen else (),
         embedding=checked.embedding if checked else None,

@@ -144,3 +144,32 @@ describe('AI suggestions', () => {
     expect(screen.getByRole('radio', { name: 'Fallen trees' })).toBeChecked()
   })
 })
+
+describe('uncertain suggestions', () => {
+  it('keeps the closest category, asks to verify, and explains streetlights', async () => {
+    exif.gps.mockResolvedValue(undefined)
+    serve({
+      prediction_available: true,
+      model_category: 'broken_streetlights',
+      confidence: 0.4,
+      category_source: 'vision',
+      needs_check: true,
+      problem_seen: false,
+      suggested_description: 'The AI is uncertain whether this photo shows a problem. Please check. A lamp post.',
+      hazards: [],
+    })
+    render(<App />)
+    fireEvent.change(await screen.findByLabelText(/incident photo/i), { target: { files: [photo()] } })
+    expect(await screen.findByText('AI is uncertain')).toBeInTheDocument()
+    next()
+    fireEvent.change(await screen.findByLabelText(/latitude/i), { target: { value: '14.3' } })
+    fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '120.9' } })
+    next()
+    expect(await screen.findByRole('radio', { name: 'Broken streetlights' })).toBeChecked()
+    expect(screen.getAllByText('AI unsure · please check')).toHaveLength(2)
+    expect(screen.getByText(/cannot show whether a light works/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox')).toHaveValue(
+      'The AI is uncertain whether this photo shows a problem. Please check. A lamp post.',
+    )
+  })
+})

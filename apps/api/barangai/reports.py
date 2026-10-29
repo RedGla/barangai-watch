@@ -94,6 +94,7 @@ def preview_prediction(
         "confidence": result.confidence,
         "category_source": result.source,
         "needs_check": result.needs_check,
+        "problem_seen": result.problem_seen,
         "suggested_description": result.description,
         "hazards": list(result.hazards),
     }

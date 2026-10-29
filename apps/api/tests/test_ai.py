@@ -45,6 +45,7 @@ def test_preview_requires_auth_and_works_with_no_ai_configured(client, photo):
         "confidence": None,
         "category_source": None,
         "needs_check": False,
+        "problem_seen": True,
         "suggested_description": None,
         "hazards": [],
     }
@@ -66,6 +67,7 @@ def test_agreeing_models_fill_the_form_and_submission_reuses_the_preview(client,
         "confidence": 0.82,
         "category_source": "agreed",
         "needs_check": False,
+        "problem_seen": True,
         "suggested_description": "Knee-deep water covers the road.",
         "hazards": ["blocks_road"],
     }
@@ -164,7 +166,7 @@ def test_no_street_name_without_a_geocoder(client, photo):
             '{"category": "potholes", "description": "Call 0917 123 4567 for help", "hazards": []}',
             ("potholes", None, ()),
         ),
-        ('{"category": "none", "description": ""}', None),
+        ('{"category": "none", "description": ""}', (None, vision.UNCERTAIN["en"], ())),
         ("not json at all", None),
     ],
 )
@@ -174,8 +176,8 @@ def test_vision_replies_are_validated(text, expected):
 
 
 def test_vision_request_shapes(monkeypatch):
-    path, body = vision.request_body("@cf/google/gemma-3-12b-it", b"img", "fil")
-    assert path == "ai/v1/chat/completions"
+    path, body = vision.request_body("@cf/mistralai/mistral-small-3.1-24b-instruct", b"img", "fil")
+    assert path == "ai/run/@cf/mistralai/mistral-small-3.1-24b-instruct"
     assert body["messages"][0]["content"][1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
     assert "Filipino" in body["messages"][0]["content"][0]["text"]
     path, body = vision.request_body("@cf/meta/llama-3.2-11b-vision-instruct", b"img", "en")
@@ -264,3 +266,86 @@ def test_combine_rules():
     assert ai.combine(seen, None).source is None
     assert ai.combine(seen, None).description == "Something odd."
     assert ai.combine(None, None).available is False
+
+
+def test_vision_reads_already_parsed_json_replies(monkeypatch):
+    """Mistral on Workers AI returns the JSON object itself, not text."""
+    import httpx
+
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "a" * 32)
+    monkeypatch.setenv("CLOUDFLARE_WORKERS_AI_TOKEN", "synthetic-token")
+    reply = {
+        "success": True,
+        "errors": [],
+        "result": {
+            "response": {
+                "category": "potholes",
+                "description": "A deep pothole in the road.",
+                "hazards": ["blocks_road"],
+            }
+        },
+    }
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(200, json=reply))
+    result = vision.describe(_jpeg())
+    assert (result.category, result.description, result.hazards) == (
+        "potholes",
+        "A deep pothole in the road.",
+        ("blocks_road",),
+    )
+
+
+def test_cloudflare_errors_are_logged_without_secrets(monkeypatch, caplog):
+    import httpx
+
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "a" * 32)
+    monkeypatch.setenv("CLOUDFLARE_WORKERS_AI_TOKEN", "synthetic-secret-token")
+    denied = {"success": False, "errors": [{"code": 5018, "message": "This account is not allowed to access model"}]}
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: httpx.Response(403, json=denied))
+    assert vision.describe(_jpeg()) is None
+    assert "not allowed to access model" in caplog.text
+    assert "synthetic-secret-token" not in caplog.text
+
+
+def test_nothing_broken_keeps_the_guess_but_asks_the_resident_to_verify(client, photo, monkeypatch):
+    seen = vision.parse(
+        json.dumps(
+            {
+                "category": "damaged_signage",
+                "problem_visible": False,
+                "description": "A clean, readable street sign.",
+                "hazards": ["blocks_road"],
+            }
+        ),
+        "vlm",
+        "en",
+    )
+    assert seen.category == "damaged_signage" and seen.problem_seen is False
+    assert seen.description == f"{vision.UNCERTAIN['en']} A clean, readable street sign."
+    assert seen.hazards == ()  # no hazards from a photo where nothing looks wrong
+    fake_models(monkeypatch, seen, checker.CheckerResult(None, 0.7, [1.0], "clip-v1"))
+    register(client)
+    body = preview(client, photo).json()
+    assert body["model_category"] == "damaged_signage"
+    assert body["needs_check"] is True
+    assert body["problem_seen"] is False
+    assert body["suggested_description"].startswith("The AI is uncertain")
+
+
+def test_uncertain_note_follows_the_language():
+    seen = vision.parse(
+        '{"category": "potholes", "problem_visible": false, "description": "Maayos ang kalsada."}', "vlm", "fil"
+    )
+    assert seen.description.startswith("Hindi tiyak ang AI")
+
+
+def test_streetlights_are_always_confirmed_by_the_resident():
+    seen = vision.VisionResult("broken_streetlights", "A lamp post.", (), "vlm")
+    checked = checker.CheckerResult("broken_streetlights", 0.9, [1.0], "clip-v1")
+    result = ai.combine(seen, checked)
+    assert result.source == "agreed"
+    assert result.needs_check is True
+
+
+def test_checker_only_guesses_are_marked_to_check():
+    result = ai.combine(None, checker.CheckerResult("potholes", 0.9, [1.0], "clip-v1"))
+    assert (result.category, result.source, result.needs_check) == ("potholes", "checker", True)

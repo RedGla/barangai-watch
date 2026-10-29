@@ -45,5 +45,7 @@ export type Prediction = {
   // 'agreed' (both models), 'vision' (Cloudflare only), 'checker' (MobileCLIP only)
   category_source?: 'agreed' | 'vision' | 'checker' | null
   needs_check?: boolean
+  // false when the vision model looked and saw nothing wrong
+  problem_seen?: boolean
   hazards?: Hazard[]
 }
