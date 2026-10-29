@@ -35,11 +35,8 @@ from barangai import checker, vision  # noqa: E402
 from barangai.media import sanitize_image  # noqa: E402
 
 LABELS = (*vision.CATEGORIES, "none")
-MODELS = (
-    "@cf/google/gemma-3-12b-it",
-    "@cf/mistralai/mistral-small-3.1-24b-instruct",
-    "@cf/meta/llama-3.2-11b-vision-instruct",
-)
+# Gemma 3 is not allowed on Workers Free accounts; Llama 3.2 Vision needs a one-time "agree" call first.
+MODELS = ("@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/meta/llama-3.2-11b-vision-instruct")
 # Neurons per million tokens (input, output), from Cloudflare's pricing page, October 2026; re-check before quoting.
 NEURONS = {
     "@cf/google/gemma-3-12b-it": (31371, 50560),
@@ -85,8 +82,8 @@ def ask_vision(model: str, image: bytes, language: str):
     if response.status_code != 200:
         return None, seconds, None, f"HTTP {response.status_code}: {str(data)[:200]}"
     usage = data.get("usage") or (data.get("result") or {}).get("usage") or {}
-    neurons = None
-    if usage.get("prompt_tokens") is not None and model in NEURONS:
+    neurons = usage.get("neurons")
+    if neurons is None and usage.get("prompt_tokens") is not None and model in NEURONS:
         rate_in, rate_out = NEURONS[model]
         neurons = (usage["prompt_tokens"] * rate_in + usage.get("completion_tokens", 0) * rate_out) / 1e6
     text = vision.reply_text(data)

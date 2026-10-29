@@ -346,6 +346,10 @@ const filipino: Record<string, string> = {
   'The AI noticed:': 'Napansin ng AI:',
   'We filled in the category and a description. You can change both on the Details step.':
     'Pinunan namin ang kategorya at paglalarawan. Puwede mong baguhin ang dalawa sa hakbang na Detalye.',
+  'A photo cannot show whether a light works. Choose this only if it stays off at night or is visibly damaged.':
+    'Hindi makikita sa larawan kung gumagana ang ilaw. Piliin lamang ito kung patay ito sa gabi o halatang sira.',
+  'Nothing looks broken. We picked the closest category; please verify it and the description.':
+    'Mukhang walang sira. Pinili namin ang pinakamalapit na kategorya; pakisuri ito at ang paglalarawan.',
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

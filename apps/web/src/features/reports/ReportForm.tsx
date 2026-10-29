@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImagePlus,
+  Info,
   LoaderCircle,
   LocateFixed,
   Map as MapIcon,
@@ -408,6 +409,15 @@ export function ReportForm() {
                       ))}
                     </div>
                   </fieldset>
+                  {category === 'broken_streetlights' && (
+                    <p className="flex items-start gap-1.5 px-1 text-[13px] text-muted-foreground">
+                      <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                      <Txt>
+                        A photo cannot show whether a light works. Choose this only if it stays off at night or is
+                        visibly damaged.
+                      </Txt>
+                    </p>
+                  )}
                   {hazards.some(hazard => hazard !== 'electrical_hazard') && (
                     <p className="flex flex-wrap items-center gap-1.5 px-1 text-[13px] text-muted-foreground">
                       <Sparkles className="size-3.5" aria-hidden="true" />
@@ -448,7 +458,7 @@ export function ReportForm() {
                   <label className="block space-y-2">
                     <span className="flex items-center justify-between gap-2 px-1 text-[15px] font-semibold">
                       <Txt>Description (optional)</Txt>
-                      {aiFilled.description && <AiTag />}
+                      {aiFilled.description && <AiTag check={prediction?.problem_seen === false} />}
                     </span>
                     <Textarea
                       rows={2}
@@ -771,20 +781,25 @@ function PhotoStep({
   )
 }
 
-/** The classifier is frozen for now; this card must never read as a verified result. */
+/** AI suggestions only; this card must never read as a verified result. */
 function AiCard({ prediction }: { prediction: Prediction | null }) {
   const [title, body] = !prediction
     ? ['Checking the photo…', 'You can continue while this runs.']
-    : prediction.model_category
+    : prediction.problem_seen === false
       ? [
-          '',
-          prediction.suggested_description
-            ? 'We filled in the category and a description. You can change both on the Details step.'
-            : 'We filled in the category for you. You can change it on the Details step.',
+          'AI is uncertain',
+          'Nothing looks broken. We picked the closest category; please verify it and the description.',
         ]
-      : prediction.prediction_available
-        ? ['AI is uncertain', 'Choose the category yourself. Barangay personnel will verify it.']
-        : ['AI classification unavailable', 'Choose the category yourself. Barangay personnel will verify it.']
+      : prediction.model_category
+        ? [
+            '',
+            prediction.suggested_description
+              ? 'We filled in the category and a description. You can change both on the Details step.'
+              : 'We filled in the category for you. You can change it on the Details step.',
+          ]
+        : prediction.prediction_available
+          ? ['AI is uncertain', 'Choose the category yourself. Barangay personnel will verify it.']
+          : ['AI classification unavailable', 'Choose the category yourself. Barangay personnel will verify it.']
   return (
     <div aria-live="polite" className={cn('hairline flex gap-3 rounded-2xl p-4', prediction ? 'bg-card' : 'shimmer')}>
       <span className="grid size-9 shrink-0 place-items-center rounded-[9px] bg-tint text-primary">
@@ -792,7 +807,7 @@ function AiCard({ prediction }: { prediction: Prediction | null }) {
       </span>
       <span className="min-w-0 text-[15px]">
         <strong className="block font-semibold">
-          {prediction?.model_category ? (
+          {prediction?.model_category && prediction.problem_seen !== false ? (
             <>
               <Txt>AI suggests</Txt> <Txt>{label(prediction.model_category)}</Txt>
             </>
