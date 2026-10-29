@@ -8,11 +8,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .auth import attempts
 from .auth import router as auth_router
 from .body_limit import ReportBodyLimitMiddleware
+from .checker import validate_configured_checker
 from .db import database_url, upgrade_sqlite
 from .duplicates import router as duplicates_router
 from .fallbacks import router as fallbacks_router
+from .geo import router as geo_router
 from .google_auth import router as google_router
-from .inference import validate_configured_model
 from .media import validate_storage_config
 from .notifications import router as notifications_router
 from .reports import router as reports_router
@@ -20,7 +21,7 @@ from .workflow import router as workflow_router
 
 
 def create_app():
-    validate_configured_model()
+    validate_configured_checker()
     validate_storage_config()
     app = FastAPI(title="BarangAI API", root_path=os.environ.get("API_ROOT_PATH", ""))
     attempts.clear()
@@ -34,6 +35,7 @@ def create_app():
     app.include_router(fallbacks_router)
     app.include_router(duplicates_router)
     app.include_router(notifications_router)
+    app.include_router(geo_router)
     app.add_middleware(ReportBodyLimitMiddleware)
 
     @app.get("/health", include_in_schema=False)

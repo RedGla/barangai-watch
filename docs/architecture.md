@@ -7,7 +7,9 @@ flowchart LR
   W -->|same-origin /api, cookie + CSRF| A[FastAPI]
   A --> P[(PostgreSQL)]
   A --> M[Private image storage]
-  A -. validated checkpoint when available .-> V[PyTorch classifier]
+  A -. cleaned photo, when configured .-> V[Cloudflare vision model]
+  A --> C[MobileCLIP2-S0 checker, ONNX]
+  A -. pin rounded to ~11 m, when configured .-> G[OpenStreetMap Nominatim]
   A -. configured free LLM when available .-> L[LLM provider]
 ```
 

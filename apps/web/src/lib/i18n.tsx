@@ -319,8 +319,8 @@ const filipino: Record<string, string> = {
   'Its photo, categories and status history open here.':
     'Dito lalabas ang larawan, kategorya, at kasaysayan ng estado nito.',
   'Filled by AI · you can edit': 'Pinunan ng AI · puwede mong baguhin',
-  'Soon the AI will write this from your photo. For now, add a short note if you like.':
-    'Malapit nang isulat ito ng AI mula sa larawan mo. Sa ngayon, magdagdag ng maikling tala kung gusto mo.',
+  'The AI writes this from your photo when it can. Add a short note if it did not.':
+    'Isinusulat ito ng AI mula sa larawan mo kapag kaya nito. Magdagdag ng maikling tala kung hindi.',
   'Take a clear photo. The AI fills in the details for you, and you can change anything.':
     'Kumuha ng malinaw na larawan. Pupunan ng AI ang mga detalye, at puwede mong baguhin ang anuman.',
   'or drag a photo here': 'o i-drag dito ang larawan',
@@ -337,6 +337,15 @@ const filipino: Record<string, string> = {
   open: 'bukas',
   resolved: 'nalutas',
   'Call 911': 'Tumawag sa 911',
+  'AI unsure · please check': 'Hindi tiyak ang AI · pakisuri',
+  'Blocks the road': 'Nakaharang sa daan',
+  'Electrical hazard': 'Panganib sa kuryente',
+  'Risk to people': 'Panganib sa tao',
+  'From your photo': 'Mula sa larawan mo',
+  'From your phone': 'Mula sa telepono mo',
+  'The AI noticed:': 'Napansin ng AI:',
+  'We filled in the category and a description. You can change both on the Details step.':
+    'Pinunan namin ang kategorya at paglalarawan. Puwede mong baguhin ang dalawa sa hakbang na Detalye.',
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

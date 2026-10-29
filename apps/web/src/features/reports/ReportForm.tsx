@@ -21,16 +21,18 @@ import { Kap, kapAvailable } from '@/components/Kap'
 import { Alert, LargeTitle } from '@/components/page'
 import { cn } from '@/lib/utils'
 import { post } from '../../lib/api'
-import { Txt, useText } from '../../lib/i18n'
+import { Txt, useLanguage, useText } from '../../lib/i18n'
 import { ResidentAccount } from '../../app/ResidentShell'
 import { categories, label } from './categories'
 import { CategoryTile } from './CategoryIcon'
 import { MapPicker } from './MapPicker'
+import { photoCoordinates, useStreetName, type LocationSource } from './location'
 import { useSubmitReport } from './queries'
 import type { Category, Prediction, Report } from './types'
 
 const UNAVAILABLE: Prediction = { prediction_available: false, model_category: null, confidence: null }
 const NOT_FILLED = { category: false, description: false }
+const HAZARD_LABEL: Record<string, string> = { blocks_road: 'Blocks the road', risk_to_people: 'Risk to people' }
 const STEPS = ['Photo', 'Location', 'Details', 'Review'] as const
 const EASE = [0.22, 1, 0.36, 1] as const
 const PATH = ['Pending', 'Under Verification', 'Accepted', 'In Progress', 'Resolved']
@@ -75,6 +77,9 @@ export function ReportForm() {
   const [submitted, setSubmitted] = useState<Report | null>(null)
   // Which fields the AI filled from the photo; editing a field hands it back to the resident.
   const [aiFilled, setAiFilled] = useState(NOT_FILLED)
+  const [locationSource, setLocationSource] = useState<LocationSource>(null)
+  const { language } = useLanguage()
+  const streetName = useStreetName(latitude, longitude)
   useEffect(() => {
     if (!photo || typeof URL.createObjectURL !== 'function') return
     const url = URL.createObjectURL(photo)
@@ -86,6 +91,7 @@ export function ReportForm() {
     const controller = new AbortController()
     const form = new FormData()
     form.set('image', photo)
+    form.set('language', language)
     void post<Prediction>('/reports/predict', form, { signal: controller.signal })
       .then(result => {
         if (controller.signal.aborted) return
@@ -105,6 +111,8 @@ export function ReportForm() {
         if (!controller.signal.aborted) setPrediction(UNAVAILABLE)
       })
     return () => controller.abort()
+    // Analyse each photo once, in the language in use when it was chosen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photo])
 
   function go(next: number) {
@@ -128,12 +136,29 @@ export function ReportForm() {
     setPrediction(null)
     setError('')
     const problem = photoProblem(file)
-    if (problem) setError(problem)
-    else setPhoto(file)
+    if (problem) {
+      setError(problem)
+      return
+    }
+    setPhoto(file)
+    // Location without typing: the photo's own GPS first, then the phone's, quietly (the pin can still move).
+    void photoCoordinates(file).then(coordinates => {
+      if (coordinates) {
+        setLatitude(String(coordinates[0]))
+        setLongitude(String(coordinates[1]))
+        setLocationSource('photo')
+      } else if (!validCoordinates(latitude, longitude)) locate(true)
+    })
   }
-  function locate() {
+  function placePin(lat: string, lng: string) {
+    setLatitude(lat)
+    setLongitude(lng)
+    setLocationSource('manual')
+  }
+  /** Quiet mode is the automatic attempt after a photo: a refusal shows no error, the resident just sets the pin. */
+  function locate(quiet = false) {
     if (!navigator.geolocation) {
-      setError('GPS is unavailable. Enter coordinates or place a pin on the map.')
+      if (!quiet) setError('GPS is unavailable. Enter coordinates or place a pin on the map.')
       return
     }
     setLocating(true)
@@ -141,12 +166,13 @@ export function ReportForm() {
       position => {
         setLatitude(position.coords.latitude.toFixed(6))
         setLongitude(position.coords.longitude.toFixed(6))
+        setLocationSource('device')
         setLocating(false)
-        setError('')
+        if (!quiet) setError('')
       },
       () => {
         setLocating(false)
-        setError('Location access was unavailable. Enter coordinates or place a pin on the map.')
+        if (!quiet) setError('Location access was unavailable. Enter coordinates or place a pin on the map.')
       },
       { enableHighAccuracy: true, timeout: 10000 },
     )
@@ -185,6 +211,7 @@ export function ReportForm() {
     setLongitude('')
     setShowMap(false)
     setAiFilled(NOT_FILLED)
+    setLocationSource(null)
     setDirection(-1)
     setStep(0)
   }
@@ -193,6 +220,9 @@ export function ReportForm() {
 
   const ready = [Boolean(photo), validCoordinates(latitude, longitude), Boolean(category), true]
   const located = validCoordinates(latitude, longitude)
+  const coordinates = located ? `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}` : ''
+  const hazards = prediction?.hazards ?? []
+  const showSafety = category === 'exposed_wiring' || hazards.includes('electrical_hazard')
   return (
     <div className="lg:mx-auto lg:max-w-6xl">
       <LargeTitle title={t('Make a report')} trailing={<ResidentAccount />} />
@@ -255,7 +285,7 @@ export function ReportForm() {
                       <Button
                         className="w-full whitespace-normal lg:h-[52px]"
                         type="button"
-                        onClick={locate}
+                        onClick={() => locate()}
                         disabled={locating}
                       >
                         {locating ? <LoaderCircle className="animate-spin" /> : <LocateFixed />}
@@ -278,8 +308,14 @@ export function ReportForm() {
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <CheckCircle2 className="size-5 shrink-0" />
-                        <span>
-                          <Txt>Location set</Txt> · {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}
+                        <span className="min-w-0">
+                          <Txt>Location set</Txt> · {streetName ?? coordinates}
+                          {locationSource && locationSource !== 'manual' && (
+                            <span className="block text-[13px] font-normal opacity-80">
+                              <Txt>{locationSource === 'photo' ? 'From your photo' : 'From your phone'}</Txt>
+                              {streetName && ` · ${coordinates}`}
+                            </span>
+                          )}
                         </span>
                       </m.p>
                     )}
@@ -289,10 +325,7 @@ export function ReportForm() {
                       <MapPicker
                         latitude={latitude ? Number(latitude) : null}
                         longitude={longitude ? Number(longitude) : null}
-                        onPick={(lat, lng) => {
-                          setLatitude(String(lat))
-                          setLongitude(String(lng))
-                        }}
+                        onPick={(lat, lng) => placePin(String(lat), String(lng))}
                       />
                     </div>
                   )}
@@ -311,7 +344,7 @@ export function ReportForm() {
                           min="-90"
                           max="90"
                           value={latitude}
-                          onChange={event => setLatitude(event.target.value)}
+                          onChange={event => placePin(event.target.value, longitude)}
                           placeholder="14.326900"
                           className="text-foreground"
                         />
@@ -325,7 +358,7 @@ export function ReportForm() {
                           min="-180"
                           max="180"
                           value={longitude}
-                          onChange={event => setLongitude(event.target.value)}
+                          onChange={event => placePin(latitude, event.target.value)}
                           placeholder="120.936400"
                           className="text-foreground"
                         />
@@ -339,7 +372,7 @@ export function ReportForm() {
                   <fieldset>
                     <legend className="mb-2 flex w-full items-center justify-between gap-2 px-1 text-[15px] font-semibold">
                       <Txt>Incident category</Txt>
-                      {aiFilled.category && <AiTag />}
+                      {aiFilled.category && <AiTag check={prediction?.needs_check} />}
                     </legend>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {categories.map(item => (
@@ -375,8 +408,24 @@ export function ReportForm() {
                       ))}
                     </div>
                   </fieldset>
+                  {hazards.some(hazard => hazard !== 'electrical_hazard') && (
+                    <p className="flex flex-wrap items-center gap-1.5 px-1 text-[13px] text-muted-foreground">
+                      <Sparkles className="size-3.5" aria-hidden="true" />
+                      <Txt>The AI noticed:</Txt>
+                      {hazards
+                        .filter(hazard => hazard !== 'electrical_hazard')
+                        .map(hazard => (
+                          <span
+                            key={hazard}
+                            className="rounded-full bg-[color-mix(in_oklab,var(--status-progress)_13%,transparent)] px-2 py-0.5 font-medium text-[var(--status-progress)]"
+                          >
+                            <Txt>{HAZARD_LABEL[hazard] ?? hazard}</Txt>
+                          </span>
+                        ))}
+                    </p>
+                  )}
                   <AnimatePresence>
-                    {category === 'exposed_wiring' && (
+                    {showSafety && (
                       <m.div
                         role="note"
                         initial={{ opacity: 0, height: 0 }}
@@ -415,7 +464,7 @@ export function ReportForm() {
                     {!aiFilled.description && (
                       <span className="hidden items-center gap-1.5 px-1 text-[13px] font-normal text-muted-foreground sm:flex">
                         <Sparkles className="size-3.5" aria-hidden="true" />
-                        <Txt>Soon the AI will write this from your photo. For now, add a short note if you like.</Txt>
+                        <Txt>The AI writes this from your photo when it can. Add a short note if it did not.</Txt>
                       </span>
                     )}
                   </label>
@@ -435,7 +484,7 @@ export function ReportForm() {
                       { term: 'Photo', value: photo?.name, edit: 0 },
                       {
                         term: 'Location',
-                        value: `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`,
+                        value: streetName ? `${streetName} (${coordinates})` : coordinates,
                         edit: 1,
                       },
                       { term: 'Incident category', value: t(label(category || null)), edit: 2 },
@@ -510,7 +559,7 @@ export function ReportForm() {
         <Summary
           step={step}
           preview={preview}
-          location={located ? `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}` : ''}
+          location={located ? (streetName ?? coordinates) : ''}
           category={category}
           description={description.trim()}
           onEdit={go}
@@ -610,11 +659,18 @@ function Summary({
 }
 
 /** Marks a field the AI filled in from the photo; it disappears once the resident edits that field. */
-function AiTag() {
+function AiTag({ check = false }: { check?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-tint px-2 py-0.5 text-[12px] font-semibold text-primary">
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold',
+        check
+          ? 'bg-[color-mix(in_oklab,var(--status-pending)_14%,transparent)] text-[var(--status-pending)]'
+          : 'bg-tint text-primary',
+      )}
+    >
       <Sparkles className="size-3" aria-hidden="true" />
-      <Txt>Filled by AI · you can edit</Txt>
+      <Txt>{check ? 'AI unsure · please check' : 'Filled by AI · you can edit'}</Txt>
     </span>
   )
 }
@@ -720,7 +776,12 @@ function AiCard({ prediction }: { prediction: Prediction | null }) {
   const [title, body] = !prediction
     ? ['Checking the photo…', 'You can continue while this runs.']
     : prediction.model_category
-      ? ['', 'We filled in the category for you. You can change it on the Details step.']
+      ? [
+          '',
+          prediction.suggested_description
+            ? 'We filled in the category and a description. You can change both on the Details step.'
+            : 'We filled in the category for you. You can change it on the Details step.',
+        ]
       : prediction.prediction_available
         ? ['AI is uncertain', 'Choose the category yourself. Barangay personnel will verify it.']
         : ['AI classification unavailable', 'Choose the category yourself. Barangay personnel will verify it.']
