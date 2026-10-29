@@ -28,3 +28,16 @@ services:
         value: "5000000"
       - key: MAX_REQUEST_BYTES
         value: "6000000"
+      # Report AI and sign-in, each optional: leave a value blank and that feature stays off.
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_WORKERS_AI_TOKEN
+        sync: false
+      - key: GEOCODER_CONTACT
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false

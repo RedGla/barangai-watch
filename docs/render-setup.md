@@ -8,7 +8,7 @@ The existing demo runs at [BarangAI](https://barangai-watch.onrender.com). The r
 
 Create a [Render account](https://dashboard.render.com/) and a Supabase Free project, preferably in Singapore. Complete [Supabase setup](supabase-setup.md), including its private bucket and database security configuration. Then, with the user's authorization, publish this repository to a Git provider that Render supports. Render cannot build an unpublished local directory.
 
-The root `render.yaml` declares exactly one `free` web service in Singapore. It creates no Render database, disk, worker, or paid resource. The [current free compute plan](https://render.com/docs/compute-plans) provides 512 MB of memory and 0.1 CPU. The image includes the reviewed v3 model and a pinned CPU-only PyTorch runtime. Verify resource use before release and check predictions on the actual host afterward; see [AI readiness](deployment.md#ai-readiness).
+The root `render.yaml` declares exactly one `free` web service in Singapore. It creates no Render database, disk, worker, or paid resource. The [current free compute plan](https://render.com/docs/compute-plans) provides 512 MB of memory and 0.1 CPU. The image includes the MobileCLIP2-S0 category checker on ONNX Runtime (no PyTorch). Verify resource use before release and check predictions on the actual host afterward; see [AI readiness](deployment.md#ai-readiness).
 
 ## 2. Private environment settings
 
@@ -19,8 +19,11 @@ Enter these values in the Render Blueprint setup prompts. They are marked `sync:
 | `DATABASE_URL` | Supabase PostgreSQL URL using SQLAlchemy's `postgresql+psycopg2://` scheme, URL-encoded password, and `sslmode=require`. Use the session pooler from the Supabase Connect dialog if direct IPv6 is unavailable; see the Supabase guide. |
 | `SUPABASE_URL` | The project's `https://<project-ref>.supabase.co` URL. |
 | `SUPABASE_SECRET_KEY` | A server-only `sb_secret_...` key. Never place it in a `VITE_` variable, frontend code, or a public document. |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_WORKERS_AI_TOKEN` | Optional. The Cloudflare account ID and a Workers AI API token, for photo descriptions and the chatbot. Keep the account on the Workers Free plan so usage never bills. |
+| `GEOCODER_CONTACT` | Optional. A contact email for OpenStreetMap's usage policy; street names work without it. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Optional, for resident Google sign-in. The redirect URI is `https://<service>.onrender.com/api/auth/google/callback`. |
 
-The Blueprint sets `MEDIA_STORAGE=supabase`, `SUPABASE_STORAGE_BUCKET=incident-photos`, `COOKIE_SECURE=true`, and `STATIC_SITE_DIR=/app/static`. If you choose a different private bucket name, update that setting before deployment. Leave `API_ROOT_PATH` unset; the application mounts `/api` itself. The image supplies the reviewed model path, approved hash and demo-only 0.8 confidence cutoff. Remove old empty model-variable overrides so those defaults apply. Keep optional paid services unset.
+The Blueprint sets `MEDIA_STORAGE=supabase`, `SUPABASE_STORAGE_BUCKET=incident-photos`, `COOKIE_SECURE=true`, and `STATIC_SITE_DIR=/app/static`. If you choose a different private bucket name, update that setting before deployment. Leave `API_ROOT_PATH` unset; the application mounts `/api` itself. The image supplies the checker's model path, its hash checks, the duplicate-embedding version and `GEOCODER=nominatim`. Keep optional paid services unset.
 
 ## 3. Review and deploy when authorized
 
